@@ -202,19 +202,33 @@ function loadRules() {
     const tbody = document.querySelector("#maskTable tbody");
     tbody.innerHTML = "";
 
-    const saved = localStorage.getItem(STORAGE_KEY);
-    const rules = saved ? JSON.parse(saved) : DEFAULT_MASK_RULES;
-
-    rules.forEach(rule => {
+    // ① デフォルトルールを先に表示
+    DEFAULT_MASK_RULES.forEach(rule => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td><input type="checkbox" class="mask-enable" ${rule.enabled ? "checked" : ""}></td>
-            <td><input type="text" class="mask-word" value="${rule.value}"></td>
-            <td><input type="checkbox" class="mask-regex" ${rule.isRegex ? "checked" : ""}></td>
+            <td><input type="text" class="mask-word" value="${rule.value}" readonly></td>
+            <td><input type="checkbox" class="mask-regex" ${rule.isRegex ? "checked" : ""} disabled></td>
         `;
         tbody.appendChild(tr);
     });
+
+    // ② ローカルストレージに保存されたルールを表示
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+        const userRules = JSON.parse(saved);
+        userRules.forEach(rule => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td><input type="checkbox" class="mask-enable" ${rule.enabled ? "checked" : ""}></td>
+                <td><input type="text" class="mask-word" value="${rule.value}"></td>
+                <td><input type="checkbox" class="mask-regex" ${rule.isRegex ? "checked" : ""}></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
 }
+
 
 /* =====================================================
    補助関数
