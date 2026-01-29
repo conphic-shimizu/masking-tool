@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Wordマスキングツール</title>
+    <title>Word マスキングツール</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
@@ -21,7 +21,25 @@
             font-weight: bold;
         }
 
-        textarea {
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12px;
+        }
+
+        table,
+        th,
+        td {
+            border: 1px solid #ccc;
+        }
+
+        th,
+        td {
+            padding: 6px;
+            text-align: left;
+        }
+
+        input[type="text"] {
             width: 100%;
             box-sizing: border-box;
         }
@@ -30,23 +48,13 @@
             padding: 10px 20px;
             font-size: 16px;
             cursor: pointer;
-            margin-top: 8px;
+            margin-right: 8px;
         }
 
-        section {
-            margin-bottom: 24px;
-        }
-
-        table {
-            border-collapse: collapse;
-            width: 100%;
-        }
-
-        th,
-        td {
-            border: 1px solid #ccc;
-            padding: 6px;
-            text-align: left;
+        footer {
+            margin-top: 40px;
+            font-size: 12px;
+            color: #666;
         }
     </style>
 </head>
@@ -69,14 +77,14 @@
                     <th>正規表現</th>
                 </tr>
             </thead>
-            <tbody>
-                <!-- 初期ルールはJSで追加 -->
-            </tbody>
+            <tbody></tbody>
         </table>
         <button id="addRowBtn" type="button">＋ 行を追加</button>
     </section>
 
     <button id="runBtn">マスキング実行</button>
+
+    <footer>Version 1.0.0</footer>
 
     <!-- ライブラリ -->
     <script src="lib/jszip.min.js"></script>
