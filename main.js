@@ -28,39 +28,44 @@ document.addEventListener("DOMContentLoaded", () => {
    イベント登録
 ===================================================== */
 function bindEvents() {
+    // 追加ボタン
     document.getElementById("addRowBtn").addEventListener("click", () => addRuleRow());
+
+    // マスキング実行
     document.getElementById("runBtn").addEventListener("click", runMasking);
 
+    // tbody の変更を監視して localStorage に保存
     const tbody = document.querySelector("#maskTable tbody");
     tbody.addEventListener("input", saveRules);
     tbody.addEventListener("change", saveRules);
+
+    // tbody 内の削除ボタンはイベントデリゲートで対応
+    tbody.addEventListener("click", e => {
+        if (e.target.classList.contains("delete-row")) {
+            e.target.closest("tr").remove();
+            saveRules();
+        }
+    });
 }
 
 /* =====================================================
-   ルール行操作（追加・削除）
+   ルール行操作（追加）
 ===================================================== */
 function addRuleRow(rule = { value: "", enabled: true, isRegex: false }, isDefault = false) {
     const tbody = document.querySelector("#maskTable tbody");
     const tr = document.createElement("tr");
 
     tr.innerHTML = `
-        <td><input type="checkbox" class="mask-enable" ${rule.enabled ? "checked" : ""}></td>
+        <td><input type="checkbox" class="mask-enable" ${rule.enabled ? "checked" : ""} ${isDefault ? "disabled" : ""}></td>
         <td><input type="text" class="mask-word" value="${rule.value}" ${isDefault ? "readonly" : ""}></td>
         <td><input type="checkbox" class="mask-regex" ${rule.isRegex ? "checked" : ""} ${isDefault ? "disabled" : ""}></td>
         <td>${isDefault ? "" : '<button type="button" class="delete-row">削除</button>'}</td>
     `;
 
     tbody.appendChild(tr);
-    if (!isDefault) tr.querySelector(".mask-word").focus();
 
-    // 削除ボタンイベント
-    const delBtn = tr.querySelector(".delete-row");
-    if (delBtn) {
-        delBtn.addEventListener("click", () => {
-            tr.remove();
-            saveRules();
-        });
-    }
+    // 新規ユーザー行の場合は自動でフォーカス
+    if (!isDefault) tr.querySelector(".mask-word").focus();
 
     saveRules();
 }
@@ -226,14 +231,12 @@ function getSelectedFile() {
     return file;
 }
 
-// XML特殊文字エスケープ
 function escapeXml(str) {
     return str.replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
 }
 
-// ダウンロード
 function download(blob, filename) {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);

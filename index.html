@@ -8,7 +8,7 @@
     <style>
         body {
             font-family: sans-serif;
-            max-width: 720px;
+            max-width: 800px;
             margin: 40px auto;
             padding: 0 16px;
         }
@@ -21,19 +21,42 @@
             font-weight: bold;
         }
 
-        textarea {
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 6px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f0f0f0;
+        }
+
+        input[type="text"] {
             width: 100%;
             box-sizing: border-box;
         }
 
         button {
-            padding: 10px 20px;
-            font-size: 16px;
+            padding: 6px 12px;
+            font-size: 14px;
             cursor: pointer;
         }
 
-        section {
-            margin-bottom: 24px;
+        .delete-row {
+            background-color: #ff6666;
+            color: white;
+            border: none;
+        }
+
+        .delete-row:hover {
+            opacity: 0.8;
         }
     </style>
 </head>
@@ -41,38 +64,38 @@
 <body>
     <h1>Word マスキングツール</h1>
 
+    <!-- Wordファイル選択 -->
     <section>
         <label for="fileInput">Wordファイル（.docx）</label><br>
         <input type="file" id="fileInput" accept=".docx">
     </section>
 
+    <!-- マスキング対象文字列 -->
     <section>
-        <label>マスキング対象文字列</label>
-
-        <table id="maskTable" border="1" cellpadding="6">
+        <label>マスキングルール</label>
+        <table id="maskTable">
             <thead>
                 <tr>
                     <th>有効</th>
                     <th>文字列</th>
                     <th>正規表現</th>
+                    <th>操作</th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <!-- 初期値は不要 -->
-                </tr>
+                <!-- JSで初期ルールと保存ルールを描画 -->
             </tbody>
         </table>
-
         <button id="addRowBtn" type="button">＋ 行を追加</button>
     </section>
 
+    <!-- マスキング実行 -->
     <button id="runBtn">マスキング実行</button>
 
     <!-- ライブラリ -->
     <script src="lib/jszip.min.js"></script>
     <!-- メイン処理 -->
-    <script src="main.js" defer></script>
+    <script src="main.js"></script>
 </body>
 
 </html>
