@@ -17,7 +17,6 @@ document.addEventListener("DOMContentLoaded", () => {
 ===================================================== */
 function bindEvents() {
     document.getElementById("addRowBtn").addEventListener("click", addRuleRow);
-    document.getElementById("previewBtn").addEventListener("click", previewMask);
     document.getElementById("runBtn").addEventListener("click", runMasking);
 
     const tbody = document.querySelector("#maskTable tbody");
@@ -40,36 +39,6 @@ function addRuleRow() {
     tbody.appendChild(tr);
     tr.querySelector(".mask-word").focus();
     saveRules();
-}
-
-/* =====================================================
-   プレビュー処理
-===================================================== */
-async function previewMask() {
-    const file = getSelectedFile();
-    if (!file) return;
-
-    const rules = getEnabledRules();
-    if (rules.length === 0) {
-        alert("マスキング対象がありません");
-        return;
-    }
-
-    const xml = await loadDocumentXml(file);
-    if (!xml) return;
-
-    const { joined, masked } = buildPreview(xml, rules);
-
-    const area = document.getElementById("previewArea");
-    const text = document.getElementById("previewText");
-
-    text.textContent =
-        "【元のテキスト】\n" +
-        joined +
-        "\n\n【マスキング後】\n" +
-        masked;
-
-    area.style.display = "block";
 }
 
 /* =====================================================
@@ -150,24 +119,6 @@ function maskWordXml(xml, words) {
     });
 
     return xml;
-}
-
-/* =====================================================
-   プレビュー用（XMLを書き換えない）
-===================================================== */
-function buildPreview(xml, words) {
-    const regex = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
-    const texts = [];
-
-    let match;
-    while ((match = regex.exec(xml)) !== null) {
-        texts.push(match[1]);
-    }
-
-    const joined = texts.join("");
-    const masked = applyMask(joined, words);
-
-    return { joined, masked };
 }
 
 /* =====================================================
