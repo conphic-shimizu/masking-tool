@@ -7,7 +7,7 @@ const MASK_CHAR = "■";
 const DEFAULT_MASK_RULES = [
     { value: "コンフィック", enabled: true },
     { value: "\\d{3}-\\d{4}", enabled: true },                 // 郵便番号
-    { value: "\\d{2,4}-\\d{2,4}-\\d{4}", enabled: true },     // 電話番号
+    { value: "\\d{2,4}[-‐-–−ー]\\d{2,4}[-‐-–−ー]\\d{4}", enabled: true }
     { value: "[a-zA-Z0-9._%+-]+@conphic\\.co\\.jp", enabled: true }, // メール
 ];
 
