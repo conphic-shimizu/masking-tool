@@ -17,6 +17,49 @@ document.getElementById("addRowBtn").addEventListener("click", () => {
 });
 
 /* =========================
+   プレビュー
+========================= */
+document.getElementById("previewBtn").addEventListener("click", async () => {
+    const fileInput = document.getElementById("fileInput");
+    const file = fileInput.files[0];
+
+    if (!file) {
+        alert("Wordファイルを選択してください");
+        return;
+    }
+
+    const rules = getEnabledRules();
+    if (rules.length === 0) {
+        alert("マスキング対象がありません");
+        return;
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const zip = await JSZip.loadAsync(arrayBuffer);
+
+    const docXmlFile = zip.file("word/document.xml");
+    if (!docXmlFile) {
+        alert("document.xml が見つかりません");
+        return;
+    }
+
+    const xml = await docXmlFile.async("string");
+
+    const { joined, masked } = buildPreview(xml, rules);
+
+    const area = document.getElementById("previewArea");
+    const text = document.getElementById("previewText");
+
+    text.textContent =
+        "【元のテキスト】\n" +
+        joined +
+        "\n\n【マスキング後】\n" +
+        masked;
+
+    area.style.display = "block";
+});
+
+/* =========================
    マスキング実行
 ========================= */
 document.getElementById("runBtn").addEventListener("click", async () => {
@@ -187,6 +230,29 @@ function loadRules() {
     });
 }
 
+function buildPreview(xml, words) {
+    const regex = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
+    const textNodes = [];
+
+    let match;
+    while ((match = regex.exec(xml)) !== null) {
+        textNodes.push(match[1]);
+    }
+
+    const joined = textNodes.join("");
+    let masked = joined;
+
+    const maskChar = "■";
+
+    words.forEach(word => {
+        const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const re = new RegExp(escaped, "g");
+        masked = masked.replace(re, m => maskChar.repeat(m.length));
+    });
+
+    return { joined, masked };
+}
+
 document
     .querySelector("#maskTable tbody")
     .addEventListener("input", saveRules);
@@ -196,3 +262,4 @@ document
     .addEventListener("change", saveRules);
 
 document.addEventListener("DOMContentLoaded", loadRules);
+
