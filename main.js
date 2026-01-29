@@ -8,12 +8,9 @@ const MASK_CHAR = "■";
    デフォルトのマスキングプリセット
 ============================== */
 const DEFAULT_MASK_RULES = [
-    { value: "コンフィック", enabled: true, isRegex: false },
-    { value: "190-0022", enabled: true, isRegex: false },
-    { value: "東京都立川市錦町1-4-4立川サニーハイツ303", enabled: true, isRegex: false },
-    { value: "042-595-7557", enabled: true, isRegex: false },
-    { value: "042-595-7558", enabled: true, isRegex: false },
-    { value: "@conphic.co.jp", enabled: true, isRegex: true },
+    { value: "社名", enabled: true, isRegex: false },
+    { value: "電話番号", enabled: true, isRegex: false },
+    { value: "氏名", enabled: true, isRegex: false }
 ];
 
 /* =====================================================
@@ -28,46 +25,36 @@ document.addEventListener("DOMContentLoaded", () => {
    イベント登録
 ===================================================== */
 function bindEvents() {
-    // 追加ボタン
-    document.getElementById("addRowBtn").addEventListener("click", () => addRuleRow());
-
-    // マスキング実行
+    document.getElementById("addRowBtn").addEventListener("click", addRuleRow);
     document.getElementById("runBtn").addEventListener("click", runMasking);
 
-    // tbody の変更を監視して localStorage に保存
     const tbody = document.querySelector("#maskTable tbody");
     tbody.addEventListener("input", saveRules);
     tbody.addEventListener("change", saveRules);
-
-    // tbody 内の削除ボタンはイベントデリゲートで対応
-    tbody.addEventListener("click", e => {
-        if (e.target.classList.contains("delete-row")) {
-            e.target.closest("tr").remove();
-            saveRules();
-        }
-    });
 }
 
 /* =====================================================
-   ルール行操作（追加）
+   行追加・削除
 ===================================================== */
-function addRuleRow(rule = { value: "", enabled: true, isRegex: false }, isDefault = false) {
+function addRuleRow(rule = { value: "", enabled: true, isRegex: false }, allowDelete = true) {
     const tbody = document.querySelector("#maskTable tbody");
     const tr = document.createElement("tr");
 
     tr.innerHTML = `
-        <td><input type="checkbox" class="mask-enable" ${rule.enabled ? "checked" : ""} ${isDefault ? "disabled" : ""}></td>
-        <td><input type="text" class="mask-word" value="${rule.value}" ${isDefault ? "readonly" : ""}></td>
-        <td><input type="checkbox" class="mask-regex" ${rule.isRegex ? "checked" : ""} ${isDefault ? "disabled" : ""}></td>
-        <td>${isDefault ? "" : '<button type="button" class="delete-row">削除</button>'}</td>
+        <td><input type="checkbox" class="mask-enable" ${rule.enabled ? "checked" : ""}></td>
+        <td><input type="text" class="mask-word" value="${rule.value}"></td>
+        <td><input type="checkbox" class="mask-regex" ${rule.isRegex ? "checked" : ""}></td>
+        <td>${allowDelete ? '<button class="delete-row">削除</button>' : ''}</td>
     `;
 
+    if (allowDelete) {
+        tr.querySelector(".delete-row").addEventListener("click", () => {
+            tr.remove();
+            saveRules();
+        });
+    }
+
     tbody.appendChild(tr);
-
-    // 新規ユーザー行の場合は自動でフォーカス
-    if (!isDefault) tr.querySelector(".mask-word").focus();
-
-    saveRules();
 }
 
 /* =====================================================
@@ -104,7 +91,7 @@ async function runMasking() {
 /* =====================================================
    Word XML マスキング本体
 ===================================================== */
-function maskWordXml(xml, words) {
+function maskWordXml(xml, rules) {
     const textNodes = [];
     const regex = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
 
@@ -118,11 +105,9 @@ function maskWordXml(xml, words) {
         });
     }
 
-    // 連結テキストをマスク
     const joined = textNodes.map(n => n.text).join("");
-    const masked = applyMask(joined, words);
+    let masked = applyMask(joined, rules);
 
-    // 元の分割単位に再分配
     let cursor = 0;
     const replacedTexts = textNodes.map(n => {
         const part = masked.slice(cursor, cursor + n.text.length);
@@ -130,7 +115,6 @@ function maskWordXml(xml, words) {
         return part;
     });
 
-    // XMLへ書き戻し
     let offset = 0;
     textNodes.forEach((node, i) => {
         const replaced = node.full.replace(node.text, escapeXml(replacedTexts[i]));
@@ -144,11 +128,12 @@ function maskWordXml(xml, words) {
 /* =====================================================
    マスキング共通処理
 ===================================================== */
-function applyMask(text, words) {
+function applyMask(text, rules) {
     let result = text;
 
-    words.forEach(rule => {
+    rules.forEach(rule => {
         if (!rule) return;
+
         if (rule.isRegex) {
             try {
                 const re = new RegExp(rule.value, "g");
@@ -185,38 +170,20 @@ function getEnabledRules() {
    localStorage
 ===================================================== */
 function saveRules() {
-    const rules = Array.from(document.querySelectorAll("#maskTable tbody tr"))
-        .map(tr => {
-            const enable = tr.querySelector(".mask-enable");
-            const word = tr.querySelector(".mask-word");
-            const regex = tr.querySelector(".mask-regex");
-            if (!enable || !word || !regex) return null;
-            return {
-                enabled: enable.checked,
-                value: word.value,
-                isRegex: regex.checked
-            };
-        })
-        .filter(Boolean);
-
+    const rules = getEnabledRules();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(rules));
 }
 
-/* =====================================================
-   ルール読み込み
-===================================================== */
 function loadRules() {
     const tbody = document.querySelector("#maskTable tbody");
     tbody.innerHTML = "";
 
-    // デフォルトルール
-    DEFAULT_MASK_RULES.forEach(rule => addRuleRow(rule, true));
-
-    // 保存ルール
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-        JSON.parse(saved).forEach(rule => addRuleRow(rule, false));
-    }
+    const rules = saved ? JSON.parse(saved) : DEFAULT_MASK_RULES;
+
+    rules.forEach(rule => {
+        addRuleRow(rule, true);
+    });
 }
 
 /* =====================================================
@@ -224,13 +191,11 @@ function loadRules() {
 ===================================================== */
 function getSelectedFile() {
     const file = document.getElementById("fileInput").files[0];
-    if (!file) {
-        alert("Wordファイルを選択してください");
-        return null;
-    }
-    return file;
+    if (!file) alert("Wordファイルを選択してください");
+    return file || null;
 }
 
+// XMLエスケープ関数（必須！）
 function escapeXml(str) {
     return str.replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")

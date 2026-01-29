@@ -17,10 +17,6 @@
             margin-bottom: 24px;
         }
 
-        label {
-            font-weight: bold;
-        }
-
         table {
             width: 100%;
             border-collapse: collapse;
@@ -64,13 +60,11 @@
 <body>
     <h1>Word マスキングツール</h1>
 
-    <!-- Wordファイル選択 -->
     <section>
         <label for="fileInput">Wordファイル（.docx）</label><br>
         <input type="file" id="fileInput" accept=".docx">
     </section>
 
-    <!-- マスキング対象文字列 -->
     <section>
         <label>マスキングルール</label>
         <table id="maskTable">
@@ -83,18 +77,15 @@
                 </tr>
             </thead>
             <tbody>
-                <!-- JSで初期ルールと保存ルールを描画 -->
+                <!-- JSで初期ルール・保存ルールを描画 -->
             </tbody>
         </table>
         <button id="addRowBtn" type="button">＋ 行を追加</button>
     </section>
 
-    <!-- マスキング実行 -->
     <button id="runBtn">マスキング実行</button>
 
-    <!-- ライブラリ -->
     <script src="lib/jszip.min.js"></script>
-    <!-- メイン処理 -->
     <script src="main.js"></script>
 </body>
 
