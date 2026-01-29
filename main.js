@@ -20,6 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
     applyThemeFromStorage();
     bindEvents();
     loadRules();
+    syncSelectedFileName(); // 初期状態の表示
 });
 
 // =========================
@@ -42,6 +43,9 @@ function toggleTheme() {
 // =========================
 function bindEvents() {
     document.getElementById("themeToggle")?.addEventListener("click", toggleTheme);
+
+    // ファイル選択 → ファイル名表示更新
+    document.getElementById("fileInput")?.addEventListener("change", syncSelectedFileName);
 
     document.getElementById("addRowBtn")?.addEventListener("click", () => {
         addRuleRow({ value: "", enabled: true });
@@ -73,8 +77,18 @@ function bindEvents() {
         saveRules();
     });
 
-    // --- Drag & Drop sorting ---
+    // Drag & Drop sorting
     setupDragSort(tbody);
+}
+
+// 選択ファイル名表示
+function syncSelectedFileName() {
+    const input = document.getElementById("fileInput");
+    const nameEl = document.getElementById("fileName");
+    if (!nameEl) return;
+
+    const f = input?.files?.[0];
+    nameEl.textContent = f ? f.name : "未選択";
 }
 
 // =========================
@@ -86,7 +100,6 @@ function setupDragSort(tbody) {
     tbody.addEventListener("dragstart", (e) => {
         const handle = e.target?.closest?.(".dragHandle");
         if (!handle) {
-            // ハンドル以外からのドラッグは無効化
             e.preventDefault();
             return;
         }
@@ -104,7 +117,7 @@ function setupDragSort(tbody) {
 
     tbody.addEventListener("dragover", (e) => {
         if (!draggingRow) return;
-        e.preventDefault(); // drop可能にする
+        e.preventDefault();
 
         const target = e.target?.closest?.("tr");
         if (!target || target === draggingRow) return;
@@ -115,8 +128,6 @@ function setupDragSort(tbody) {
         const isAfter = (e.clientY - rect.top) > (rect.height / 2);
 
         target.classList.add(isAfter ? "drag-over-bottom" : "drag-over-top");
-
-        // DOMを入れ替え
         tbody.insertBefore(draggingRow, isAfter ? target.nextSibling : target);
     });
 
@@ -134,7 +145,8 @@ function setupDragSort(tbody) {
     });
 
     function clearDragOverClasses(tbodyEl) {
-        tbodyEl.querySelectorAll("tr.drag-over-top, tr.drag-over-bottom")
+        tbodyEl
+            .querySelectorAll("tr.drag-over-top, tr.drag-over-bottom")
             .forEach(tr => tr.classList.remove("drag-over-top", "drag-over-bottom"));
     }
 }
@@ -148,7 +160,7 @@ function loadRules() {
 
     tbody.innerHTML = "";
 
-    // ✅ localStorageが配列じゃない形でも落ちないように矯正
+    // localStorageが配列じゃない形でも落ちないように矯正
     const savedRaw = localStorage.getItem(STORAGE_KEY);
     const parsed = savedRaw ? safeJsonParse(savedRaw, []) : [];
     const saved = Array.isArray(parsed) ? parsed : [];

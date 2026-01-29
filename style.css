@@ -1,3 +1,5 @@
+/* style.css */
+
 /* ========== Theme tokens ========== */
 :root {
     /* Dark (default) */
@@ -122,12 +124,6 @@ label {
     margin-bottom: 6px;
 }
 
-input[type="file"] {
-    width: 100%;
-    padding: 10px 0;
-    color: var(--muted);
-}
-
 input[type="text"] {
     width: 100%;
     background: var(--bg2);
@@ -150,6 +146,32 @@ input[type="text"]:focus {
 input[type="checkbox"] {
     width: 16px;
     height: 16px;
+}
+
+/* file input -> button style */
+.fileInputHidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.fileName {
+    color: var(--muted);
+    font-size: 12px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: color-mix(in oklab, var(--bg2) 80%, var(--card));
+    max-width: 520px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* ========== Rows ========== */
@@ -177,6 +199,15 @@ input[type="checkbox"] {
     font-weight: 700;
     letter-spacing: .01em;
     transition: transform .02s ease, border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+
+/* label.btn をボタンとして扱えるように */
+label.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0;
+    /* labelのデフォmarginと競合しない */
 }
 
 .btn:hover {
@@ -209,6 +240,7 @@ input[type="checkbox"] {
     box-shadow: none;
 }
 
+/* A案：runボタンだけ位置を下げる */
 #runBtn {
     margin-top: 12px;
 }
@@ -245,7 +277,7 @@ tbody tr:last-child td {
     border-bottom: none;
 }
 
-/* Checkbox column centered-ish */
+/* Checkbox column centered-ish (列追加後: 2列目が有効) */
 #maskTable td:nth-child(2),
 #maskTable th:nth-child(2) {
     text-align: center;
@@ -317,5 +349,10 @@ footer {
 
     #maskTable .btn {
         width: auto;
+    }
+
+    .fileName {
+        max-width: 100%;
+        flex: 1;
     }
 }
