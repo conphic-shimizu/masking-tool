@@ -8,7 +8,7 @@
     <style>
         body {
             font-family: sans-serif;
-            max-width: 800px;
+            max-width: 720px;
             margin: 40px auto;
             padding: 0 16px;
         }
@@ -18,41 +18,32 @@
         }
 
         table {
-            width: 100%;
             border-collapse: collapse;
-            margin-bottom: 12px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        table,
+        th,
+        td {
+            border: 1px solid #aaa;
         }
 
         th,
         td {
-            border: 1px solid #ccc;
             padding: 6px;
             text-align: left;
         }
 
-        th {
-            background-color: #f0f0f0;
-        }
-
-        input[type="text"] {
-            width: 100%;
-            box-sizing: border-box;
-        }
-
         button {
             padding: 6px 12px;
-            font-size: 14px;
+            margin-top: 4px;
             cursor: pointer;
         }
 
-        .delete-row {
-            background-color: #ff6666;
-            color: white;
-            border: none;
-        }
-
-        .delete-row:hover {
-            opacity: 0.8;
+        .delete-btn {
+            color: red;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -66,7 +57,7 @@
     </section>
 
     <section>
-        <label>マスキングルール</label>
+        <label>マスキング対象文字列</label>
         <table id="maskTable">
             <thead>
                 <tr>
@@ -77,15 +68,17 @@
                 </tr>
             </thead>
             <tbody>
-                <!-- JSで制御 -->
+                <!-- ルールはJSでロード -->
             </tbody>
         </table>
-        <button id="addRowBtn" type="button">＋ 行を追加</button>
+        <button id="addRowBtn">＋ 行を追加</button>
     </section>
 
     <button id="runBtn">マスキング実行</button>
 
+    <!-- ライブラリ -->
     <script src="lib/jszip.min.js"></script>
+    <!-- メイン処理 -->
     <script src="main.js"></script>
 </body>
 
