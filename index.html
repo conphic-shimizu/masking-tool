@@ -17,15 +17,8 @@
             margin-bottom: 24px;
         }
 
-        table {
-            border-collapse: collapse;
-            width: 100%;
-        }
-
-        th,
-        td {
-            border: 1px solid #ccc;
-            padding: 6px;
+        label {
+            font-weight: bold;
         }
 
         button {
@@ -35,12 +28,22 @@
             margin-top: 8px;
         }
 
-        .delete-btn {
-            background-color: #f44336;
-            color: white;
-            border: none;
-            cursor: pointer;
-            padding: 4px 8px;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 6px;
+            text-align: left;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            box-sizing: border-box;
         }
     </style>
 </head>
@@ -64,10 +67,10 @@
                 </tr>
             </thead>
             <tbody>
-                <!-- JSで初期化 -->
+                <!-- 初期ルールはJSでロード -->
             </tbody>
         </table>
-        <button id="addRowBtn" type="button">＋ 行を追加</button>
+        <button id="addRowBtn">＋ 行を追加</button>
     </section>
 
     <button id="runBtn">マスキング実行</button>
