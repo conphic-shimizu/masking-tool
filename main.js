@@ -55,13 +55,13 @@ function addRuleRow() {
 }
 
 /* =========================
-   マスキング実行
+   マスキング実行（Word/PPTX 両対応）
 ========================= */
 async function runMasking() {
     const fileInput = document.getElementById("fileInput");
     const file = fileInput?.files?.[0];
     if (!file) {
-        alert("Wordファイルを選択してください");
+        alert("ファイル（.docx / .pptx）を選択してください");
         return;
     }
 
@@ -71,22 +71,181 @@ async function runMasking() {
         return;
     }
 
-    const arrayBuffer = await file.arrayBuffer();
-    const zip = await JSZip.loadAsync(arrayBuffer);
-
-    const docXmlFile = zip.file("word/document.xml");
-    if (!docXmlFile) {
-        alert("document.xml が見つかりません");
+    const ext = getLowerExt(file.name);
+    if (ext !== "docx" && ext !== "pptx") {
+        alert("対応形式は .docx / .pptx です");
         return;
     }
 
+    const arrayBuffer = await file.arrayBuffer();
+    const zip = await JSZip.loadAsync(arrayBuffer);
+
+    if (ext === "docx") {
+        await maskDocx(zip, rules.map(r => r.value));
+        const blob = await zip.generateAsync({ type: "blob" });
+        download(blob, file.name.replace(/\.docx$/i, "_マスキング.docx"));
+        return;
+    }
+
+    if (ext === "pptx") {
+        const result = await maskPptx(zip, rules.map(r => r.value));
+        if (result.slideFiles === 0) {
+            alert("ppt/slides/slide*.xml が見つかりません（PPTX形式でない可能性）");
+            return;
+        }
+        const blob = await zip.generateAsync({ type: "blob" });
+        download(blob, file.name.replace(/\.pptx$/i, "_マスキング.pptx"));
+        return;
+    }
+}
+
+/* =========================
+   DOCX
+========================= */
+async function maskDocx(zip, literalWords) {
+    const docXmlFile = zip.file("word/document.xml");
+    if (!docXmlFile) {
+        alert("document.xml が見つかりません");
+        throw new Error("word/document.xml not found");
+    }
+
     let xml = await docXmlFile.async("string");
-    xml = maskWordXmlByLiterals(xml, rules.map(r => r.value));
-
+    xml = maskWordXmlByLiterals(xml, literalWords);
     zip.file("word/document.xml", xml);
+}
 
-    const blob = await zip.generateAsync({ type: "blob" });
-    download(blob, file.name.replace(/\.docx$/i, "_マスキング.docx"));
+/* =========================
+   PPTX（slide*.xml の <a:t> を段落 <a:p> 単位で）
+========================= */
+async function maskPptx(zip, literalWords) {
+    const slidePaths = getPptxSlidePaths(zip);
+    let totalHits = 0;
+
+    for (const path of slidePaths) {
+        const f = zip.file(path);
+        if (!f) continue;
+
+        const xmlText = await f.async("string");
+        const { xml, hits } = maskPptxSlideXmlByLiterals(xmlText, literalWords, path);
+
+        if (hits > 0) {
+            zip.file(path, xml);
+            totalHits += hits;
+        }
+    }
+
+    return { slideFiles: slidePaths.length, totalHits };
+}
+
+function getPptxSlidePaths(zip) {
+    const re = /^ppt\/slides\/slide\d+\.xml$/;
+    const paths = [];
+    zip.forEach((relativePath, file) => {
+        if (!file.dir && re.test(relativePath)) paths.push(relativePath);
+    });
+
+    // slide1, slide2... の順に
+    paths.sort((a, b) => {
+        const na = parseInt(a.match(/slide(\d+)\.xml$/)?.[1] ?? "0", 10);
+        const nb = parseInt(b.match(/slide(\d+)\.xml$/)?.[1] ?? "0", 10);
+        return na - nb;
+    });
+
+    return paths;
+}
+
+/* =========================
+   PPTX スライドXML マスキング本体（固定文字列）
+   - <a:p>（段落）単位で
+   - 段落内の <a:t> を連結
+   - 固定文字列でマスク（長さ維持）
+   - 元の <a:t> 長で再分配
+   - DOMで安全に置換（タグ構造を壊しにくい）
+========================= */
+function maskPptxSlideXmlByLiterals(xmlText, literalWords, debugName = "") {
+    const doc = parseXml(xmlText, debugName);
+
+    // a:p（namespace問わず localName === "p" を拾う）
+    const paragraphs = getElementsByLocalName(doc, "p");
+
+    let hits = 0;
+
+    for (const p of paragraphs) {
+        // この段落配下の a:t を拾う
+        const ts = [];
+        const walker = doc.createTreeWalker(
+            p,
+            NodeFilter.SHOW_ELEMENT,
+            {
+                acceptNode(node) {
+                    return node.localName === "t"
+                        ? NodeFilter.FILTER_ACCEPT
+                        : NodeFilter.FILTER_SKIP;
+                }
+            }
+        );
+        while (walker.nextNode()) ts.push(walker.currentNode);
+
+        if (ts.length === 0) continue;
+
+        const texts = ts.map(n => n.textContent ?? "");
+        const lens = texts.map(s => s.length);
+        const joined = texts.join("");
+        if (joined.length === 0) continue;
+
+        // マスク
+        let masked = joined;
+
+        const words = literalWords
+            .map(w => (w ?? "").trim())
+            .filter(Boolean)
+            .sort((a, b) => b.length - a.length);
+
+        let localHits = 0;
+        for (const word of words) {
+            const before = masked;
+            masked = replaceAllLiteralKeepingLength(masked, word, MASK_CHAR);
+            if (masked !== before) {
+                // 差分回数を厳密に数えるのはコスト高いので、
+                // “変化あり”を1カウント（目安）にしておく（必要なら改良可）
+                localHits++;
+            }
+        }
+
+        if (localHits === 0) continue;
+
+        // 再分配（元の <a:t> の長さに合わせてslice）
+        let cursor = 0;
+        for (let i = 0; i < ts.length; i++) {
+            const part = masked.slice(cursor, cursor + lens[i]);
+            cursor += lens[i];
+            ts[i].textContent = part;
+        }
+
+        hits += localHits;
+    }
+
+    const out = new XMLSerializer().serializeToString(doc);
+    return { xml: out, hits };
+}
+
+function parseXml(xmlText, fileName) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlText, "application/xml");
+    const err = doc.getElementsByTagName("parsererror")[0];
+    if (err) {
+        throw new Error(`XML parse error: ${fileName || "(unknown)"}`);
+    }
+    return doc;
+}
+
+function getElementsByLocalName(root, localName) {
+    const all = root.getElementsByTagName("*");
+    const arr = [];
+    for (let i = 0; i < all.length; i++) {
+        if (all[i].localName === localName) arr.push(all[i]);
+    }
+    return arr;
 }
 
 /* =========================
@@ -154,7 +313,6 @@ function replaceAllLiteralKeepingLength(text, word, maskChar) {
     let result = text;
     let idx = 0;
 
-    // ループで indexOf を使う（正規表現なし）
     while (true) {
         const found = result.indexOf(word, idx);
         if (found === -1) break;
@@ -162,7 +320,6 @@ function replaceAllLiteralKeepingLength(text, word, maskChar) {
         const mask = maskChar.repeat(word.length);
         result = result.slice(0, found) + mask + result.slice(found + word.length);
 
-        // 無限ループ防止：置換後は次の位置へ
         idx = found + mask.length;
     }
 
@@ -269,4 +426,12 @@ function escapeHtml(s) {
         .replace(/"/g, "&quot;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
+}
+
+/* =========================
+   拡張子取得
+========================= */
+function getLowerExt(name) {
+    const m = String(name).toLowerCase().match(/\.([a-z0-9]+)$/);
+    return m ? m[1] : "";
 }

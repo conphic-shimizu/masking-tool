@@ -3,80 +3,38 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Word マスキングツール</title>
+    <title>Officeマスキングツール（Word / PowerPoint）</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            font-family: sans-serif;
-            max-width: 720px;
-            margin: 40px auto;
-            padding: 0 16px;
-        }
-
-        h1 {
-            margin-bottom: 24px;
-        }
-
-        label {
-            font-weight: bold;
-        }
-
-        textarea {
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-
-        section {
-            margin-bottom: 24px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th,
-        td {
-            border: 1px solid #ccc;
-            padding: 6px;
-            text-align: left;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-    <h1>Word マスキングツール</h1>
+    <div class="container">
+        <h1>Office マスキングツール（Word / PowerPoint）</h1>
+        <p class="sub">
+            Word: <code>word/document.xml</code> の <code>&lt;w:t&gt;</code> /
+            PowerPoint: <code>ppt/slides/slide*.xml</code> の <code>&lt;a:t&gt;</code>
+        </p>
 
-    <section>
-        <label for="fileInput">Wordファイル（.docx）</label><br>
-        <input type="file" id="fileInput" accept=".docx">
-    </section>
+        <div class="card">
+            <section>
+                <label for="fileInput">ファイル（.docx / .pptx）</label>
+                <input type="file" id="fileInput" accept=".docx,.pptx">
+            </section>
 
-    <section>
-        <label>マスキング対象文字列</label>
-        <table id="maskTable">
-            <thead>
-                <tr>
-                    <th>有効</th>
-                    <th>文字列</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- JSで追加 -->
-            </tbody>
-        </table>
-        <button id="addRowBtn" type="button">＋ 行を追加</button>
-    </section>
+            <section>
+                <label>マスキング対象文字列（固定文字列）</label>
+                <table id="maskTable">…</table>
 
-    <button id="runBtn">マスキング実行</button>
+                <div class="row" style="margin-top:10px;">
+                    <button id="addRowBtn" type="button" class="btn">＋ 行を追加</button>
+                    <button id="runBtn" class="btn primary">マスキング実行</button>
+                </div>
+            </section>
+        </div>
 
-    <footer style="margin-top:20px;">バージョン: 1.0</footer>
+        <footer>バージョン: 1.1（Word/PPTX対応）</footer>
+    </div>
 
     <script src="lib/jszip.min.js"></script>
     <script src="main.js"></script>
