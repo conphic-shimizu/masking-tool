@@ -39,18 +39,28 @@ function bindEvents() {
 /* =====================================================
    ルール行操作
 ===================================================== */
-function addRuleRow() {
+function addRuleRow(rule = { value: "", enabled: true, isRegex: false }, isDefault = false) {
     const tbody = document.querySelector("#maskTable tbody");
     const tr = document.createElement("tr");
 
     tr.innerHTML = `
-        <td><input type="checkbox" class="mask-enable" checked></td>
-        <td><input type="text" class="mask-word"></td>
-        <td><input type="checkbox" class="mask-regex"></td>
+        <td><input type="checkbox" class="mask-enable" ${rule.enabled ? "checked" : ""}></td>
+        <td><input type="text" class="mask-word" value="${rule.value}" ${isDefault ? "readonly" : ""}></td>
+        <td><input type="checkbox" class="mask-regex" ${rule.isRegex ? "checked" : ""} ${isDefault ? "disabled" : ""}></td>
+        <td>${isDefault ? "" : '<button type="button" class="delete-row">削除</button>'}</td>
     `;
 
     tbody.appendChild(tr);
-    tr.querySelector(".mask-word").focus();
+    if (!isDefault) tr.querySelector(".mask-word").focus();
+
+    // 削除ボタンのイベント
+    const delBtn = tr.querySelector(".delete-row");
+    if (delBtn) {
+        delBtn.addEventListener("click", () => {
+            tr.remove();
+            saveRules();
+        });
+    }
     saveRules();
 }
 
@@ -202,33 +212,20 @@ function loadRules() {
     const tbody = document.querySelector("#maskTable tbody");
     tbody.innerHTML = "";
 
-    // ① デフォルトルールを先に表示
+    // デフォルトルール（削除不可）
     DEFAULT_MASK_RULES.forEach(rule => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td><input type="checkbox" class="mask-enable" ${rule.enabled ? "checked" : ""}></td>
-            <td><input type="text" class="mask-word" value="${rule.value}" readonly></td>
-            <td><input type="checkbox" class="mask-regex" ${rule.isRegex ? "checked" : ""} disabled></td>
-        `;
-        tbody.appendChild(tr);
+        addRuleRow(rule, true);
     });
 
-    // ② ローカルストレージに保存されたルールを表示
+    // ローカルストレージルール
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
         const userRules = JSON.parse(saved);
         userRules.forEach(rule => {
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td><input type="checkbox" class="mask-enable" ${rule.enabled ? "checked" : ""}></td>
-                <td><input type="text" class="mask-word" value="${rule.value}"></td>
-                <td><input type="checkbox" class="mask-regex" ${rule.isRegex ? "checked" : ""}></td>
-            `;
-            tbody.appendChild(tr);
+            addRuleRow(rule, false);
         });
     }
 }
-
 
 /* =====================================================
    補助関数
