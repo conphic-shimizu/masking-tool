@@ -2,12 +2,12 @@ const STORAGE_KEY = "word-mask-rules";
 const MASK_CHAR = "■";
 
 const DEFAULT_MASK_RULES = [
-    { value: "株式会社コンフィック", enabled: true, isRegex: false },
-    { value: "190-0022", enabled: true, isRegex: false },
-    { value: "東京都立川市", enabled: true, isRegex: false },
-    { value: "042-595-7557", enabled: true, isRegex: false },
-    { value: "042-595-7558", enabled: true, isRegex: false },
-    { value: "@conphic.co.jp", enabled: true, isRegex: true }
+    { value: "株式会社コンフィック", enabled: true },
+    { value: "190-0022", enabled: true },
+    { value: "東京都立川市", enabled: true },
+    { value: "042-595-7557", enabled: true },
+    { value: "042-595-7558", enabled: true },
+    { value: "@conphic.co.jp", enabled: true }
 ];
 
 // 初期化
@@ -27,13 +27,12 @@ function bindEvents() {
 }
 
 // 行追加
-function addRuleRow(rule = { value: "", enabled: true, isRegex: false }) {
+function addRuleRow(rule = { value: "", enabled: true }) {
     const tbody = document.querySelector("#maskTable tbody");
     const tr = document.createElement("tr");
     tr.innerHTML = `
         <td><input type="checkbox" class="mask-enable" ${rule.enabled ? "checked" : ""}></td>
         <td><input type="text" class="mask-word" value="${rule.value}"></td>
-        <td><input type="checkbox" class="mask-regex" ${rule.isRegex ? "checked" : ""}></td>
         <td><button class="delete-btn">×</button></td>
     `;
     tbody.appendChild(tr);
@@ -116,23 +115,14 @@ function maskWordXml(xml, words) {
     return xml;
 }
 
-// マスク処理
+// マスク処理（完全一致のみ）
 function applyMask(text, words) {
     let result = text;
     words.forEach(rule => {
         if (!rule) return;
-        if (rule.isRegex) {
-            try {
-                const re = new RegExp(rule.value, "g");
-                result = result.replace(re, m => MASK_CHAR.repeat(m.length));
-            } catch (e) {
-                console.warn("無効な正規表現:", rule.value);
-            }
-        } else {
-            const escaped = rule.value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-            const re = new RegExp(escaped, "g");
-            result = result.replace(re, m => MASK_CHAR.repeat(m.length));
-        }
+        const escaped = rule.value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const re = new RegExp(escaped, "g");
+        result = result.replace(re, m => MASK_CHAR.repeat(m.length));
     });
     return result;
 }
@@ -143,11 +133,8 @@ function getEnabledRules() {
         .map(tr => {
             const enable = tr.querySelector(".mask-enable");
             const word = tr.querySelector(".mask-word");
-            const regex = tr.querySelector(".mask-regex");
-            if (!enable || !word || !regex) return null;
-            return enable.checked
-                ? { value: word.value.trim(), isRegex: regex.checked }
-                : null;
+            if (!enable || !word) return null;
+            return enable.checked ? { value: word.value.trim() } : null;
         })
         .filter(Boolean);
 }
@@ -165,12 +152,10 @@ function saveRules() {
         .map(tr => {
             const enable = tr.querySelector(".mask-enable");
             const word = tr.querySelector(".mask-word");
-            const regex = tr.querySelector(".mask-regex");
-            if (!enable || !word || !regex) return null;
+            if (!enable || !word) return null;
             return {
                 enabled: enable.checked,
-                value: word.value,
-                isRegex: regex.checked
+                value: word.value
             };
         })
         .filter(Boolean);
