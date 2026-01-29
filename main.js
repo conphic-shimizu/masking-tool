@@ -5,15 +5,15 @@ const STORAGE_KEY = "word-mask-rules";
 const MASK_CHAR = "■";
 
 /* ==============================
-   デフォルトのマスキングプリセット
+   デフォルトマスキングプリセット
+   - 通常文字列 or 正規表現対応
 ============================== */
 const DEFAULT_MASK_RULES = [
     { value: "社名", enabled: true, isRegex: false },
-    { value: "郵便番号", enabled: true, isRegex: false },
-    { value: "住所", enabled: true, isRegex: false },
+    { value: "\\d{3}-\\d{4}", enabled: true, isRegex: true }, // 郵便番号
     { value: "電話番号", enabled: true, isRegex: false },
     { value: "FAX番号", enabled: true, isRegex: false },
-    { value: "メールアドレス", enabled: true, isRegex: false }
+    { value: "@\\w+\\.\\w+", enabled: true, isRegex: true } // メールアドレス
 ];
 
 /* =====================================================
@@ -42,11 +42,13 @@ function bindEvents() {
 function addRuleRow() {
     const tbody = document.querySelector("#maskTable tbody");
     const tr = document.createElement("tr");
+
     tr.innerHTML = `
         <td><input type="checkbox" class="mask-enable" checked></td>
         <td><input type="text" class="mask-word"></td>
         <td><input type="checkbox" class="mask-regex"></td>
     `;
+
     tbody.appendChild(tr);
     tr.querySelector(".mask-word").focus();
     saveRules();
@@ -84,13 +86,14 @@ async function runMasking() {
 }
 
 /* =====================================================
-   Word XML マスキング本体
+   Word XML マスキング本体（破損防止版）
 ===================================================== */
 function maskWordXml(xml, rules) {
     const textNodes = [];
     const regex = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
-
     let match;
+
+    // <w:t> をすべて取得
     while ((match = regex.exec(xml)) !== null) {
         textNodes.push({
             full: match[0],
@@ -100,6 +103,9 @@ function maskWordXml(xml, rules) {
         });
     }
 
+    if (textNodes.length === 0) return xml;
+
+    // 連結してマスク
     const joined = textNodes.map(n => n.text).join("");
     const masked = applyMask(joined, rules);
 
@@ -111,13 +117,17 @@ function maskWordXml(xml, rules) {
         return part;
     });
 
+    // XML書き戻し
     let offset = 0;
     textNodes.forEach((node, i) => {
-        const replaced = node.full.replace(
-            node.text,
-            escapeXml(replacedTexts[i])
-        );
-        xml = xml.slice(0, node.start + offset) + replaced + xml.slice(node.end + offset);
+        const safeText = escapeXml(replacedTexts[i]);
+        const replaced = node.full.replace(node.text, safeText);
+
+        xml =
+            xml.slice(0, node.start + offset) +
+            replaced +
+            xml.slice(node.end + offset);
+
         offset += replaced.length - node.full.length;
     });
 
@@ -125,13 +135,13 @@ function maskWordXml(xml, rules) {
 }
 
 /* =====================================================
-   マスキング共通処理（正規表現対応）
+   マスキング共通処理
 ===================================================== */
 function applyMask(text, rules) {
     let result = text;
 
     rules.forEach(rule => {
-        if (!rule) return;
+        if (!rule || !rule.value) return;
 
         if (rule.isRegex) {
             try {
@@ -151,7 +161,7 @@ function applyMask(text, rules) {
 }
 
 /* =====================================================
-   有効ルール取得
+   ルール取得
 ===================================================== */
 function getEnabledRules() {
     return Array.from(document.querySelectorAll("#maskTable tbody tr"))
@@ -160,13 +170,15 @@ function getEnabledRules() {
             const word = tr.querySelector(".mask-word");
             const regex = tr.querySelector(".mask-regex");
             if (!enable || !word || !regex) return null;
-            return enable.checked ? { value: word.value.trim(), isRegex: regex.checked } : null;
+            return enable.checked
+                ? { value: word.value.trim(), isRegex: regex.checked }
+                : null;
         })
         .filter(Boolean);
 }
 
 /* =====================================================
-   localStorage 保存/読み込み
+   localStorage
 ===================================================== */
 function saveRules() {
     const rules = Array.from(document.querySelectorAll("#maskTable tbody tr"))
@@ -175,7 +187,11 @@ function saveRules() {
             const word = tr.querySelector(".mask-word");
             const regex = tr.querySelector(".mask-regex");
             if (!enable || !word || !regex) return null;
-            return { enabled: enable.checked, value: word.value, isRegex: regex.checked };
+            return {
+                enabled: enable.checked,
+                value: word.value,
+                isRegex: regex.checked
+            };
         })
         .filter(Boolean);
 
@@ -205,12 +221,11 @@ function loadRules() {
 ===================================================== */
 function getSelectedFile() {
     const file = document.getElementById("fileInput").files[0];
-    if (!file) alert("Wordファイルを選択してください");
-    return file || null;
-}
-
-function escapeXml(str) {
-    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    if (!file) {
+        alert("Wordファイルを選択してください");
+        return null;
+    }
+    return file;
 }
 
 function download(blob, filename) {
