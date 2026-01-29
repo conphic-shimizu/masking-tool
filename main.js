@@ -7,6 +7,8 @@ const DEFAULT_MASK_RULES = [
     { value: "042-595-7558", enabled: true }
 ];
 
+const STORAGE_KEY = "word-mask-rules";
+
 /* =========================
    行追加
 ========================= */
@@ -51,6 +53,7 @@ document.getElementById("runBtn").addEventListener("click", async () => {
     }
 
     let xml = await docXmlFile.async("string");
+
     xml = maskWordXml(xml, rules);
 
     zip.file("word/document.xml", xml);
@@ -63,6 +66,7 @@ document.getElementById("runBtn").addEventListener("click", async () => {
    Word XML マスキング本体
 ========================= */
 function maskWordXml(xml, words) {
+    // <w:t>...</w:t> を全部拾う
     const textNodes = [];
     const regex = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
 
@@ -76,8 +80,10 @@ function maskWordXml(xml, words) {
         });
     }
 
+    // 連結テキスト
     const joined = textNodes.map(n => n.text).join("");
     let masked = joined;
+
     const maskChar = "■";
 
     words.forEach(word => {
@@ -86,18 +92,26 @@ function maskWordXml(xml, words) {
         masked = masked.replace(re, m => maskChar.repeat(m.length));
     });
 
+    // 再分配
     let cursor = 0;
     const replacedNodes = textNodes.map(n => {
-        const part = masked.slice(cursor, cursor + n.text.length);
-        cursor += n.text.length;
+        const len = n.text.length;
+        const part = masked.slice(cursor, cursor + len);
+        cursor += len;
         return part;
     });
 
+    // XML 書き戻し
     let offset = 0;
     textNodes.forEach((node, i) => {
         const before = xml.slice(0, node.start + offset);
         const after = xml.slice(node.end + offset);
-        const replaced = node.full.replace(node.text, escapeXml(replacedNodes[i]));
+
+        const replaced = node.full.replace(
+            node.text,
+            escapeXml(replacedNodes[i])
+        );
+
         xml = before + replaced + after;
         offset += replaced.length - node.full.length;
     });
@@ -109,7 +123,9 @@ function maskWordXml(xml, words) {
    補助関数
 ========================= */
 function getEnabledRules() {
-    return Array.from(document.querySelectorAll("#maskTable tbody tr"))
+    return Array.from(
+        document.querySelectorAll("#maskTable tbody tr")
+    )
         .filter(tr => tr.querySelector(".mask-enable").checked)
         .map(tr => tr.querySelector(".mask-word").value.trim())
         .filter(Boolean);
@@ -134,20 +150,23 @@ function download(blob, filename) {
    localStorage
 ========================= */
 function saveRules() {
-    const rules = Array.from(document.querySelectorAll("#maskTable tbody tr"))
-        .map(tr => ({
-            enabled: tr.querySelector(".mask-enable").checked,
-            value: tr.querySelector(".mask-word").value
-        }));
+    const rules = Array.from(
+        document.querySelectorAll("#maskTable tbody tr")
+    ).map(tr => ({
+        enabled: tr.querySelector(".mask-enable").checked,
+        value: tr.querySelector(".mask-word").value
+    }));
+
     localStorage.setItem(STORAGE_KEY, JSON.stringify(rules));
 }
 
 function loadRules() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return;
+
+    const rules = JSON.parse(saved);
     const tbody = document.querySelector("#maskTable tbody");
     tbody.innerHTML = "";
-
-    const saved = localStorage.getItem(STORAGE_KEY);
-    let rules = saved ? JSON.parse(saved) : DEFAULT_MASK_RULES;
 
     rules.forEach(rule => {
         const tr = document.createElement("tr");
@@ -163,6 +182,12 @@ function loadRules() {
     });
 }
 
-document.querySelector("#maskTable tbody").addEventListener("input", saveRules);
-document.querySelector("#maskTable tbody").addEventListener("change", saveRules);
+document
+    .querySelector("#maskTable tbody")
+    .addEventListener("input", saveRules);
+
+document
+    .querySelector("#maskTable tbody")
+    .addEventListener("change", saveRules);
+
 document.addEventListener("DOMContentLoaded", loadRules);
