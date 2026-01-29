@@ -4,7 +4,6 @@ const MASK_CHAR = "■";
 /* =========================
    初期ルール（デフォルト）
    - 正規表現は使わない（完全一致の部分文字列マスク）
-   - コンフィックは「株式会社コンフィック」も入れておく（安定）
 ========================= */
 const DEFAULT_MASK_RULES = [
     { value: "株式会社コンフィック", enabled: true },
@@ -13,7 +12,7 @@ const DEFAULT_MASK_RULES = [
     { value: "190-0022", enabled: true },
     { value: "042-595-7557", enabled: true },
     { value: "042-595-7558", enabled: true },
-    { value: "daichi@conphic.co.jp", enabled: false }, // 例：必要ならユーザーが実値に差し替え
+    { value: "daichi@conphic.co.jp", enabled: false },
 ];
 
 /* =========================
