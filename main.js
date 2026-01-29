@@ -1,9 +1,11 @@
 const STORAGE_KEY = "word-mask-rules";
 const MASK_CHAR = "■";
 const DEFAULT_MASK_RULES = [
-    { value: "社名", enabled: true },
-    { value: "電話番号", enabled: true },
-    { value: "氏名", enabled: true }
+    { value: "株式会社コンフィック", enabled: true },
+    { value: "190-0022", enabled: true },
+    { value: "東京都立川市錦町1-4-4立川サニーハイツ303", enabled: true },
+    { value: "042-595-7557", enabled: true }
+    { value: "042-595-7558", enabled: true }
 ];
 
 document.addEventListener("DOMContentLoaded", () => {
