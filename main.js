@@ -2,16 +2,14 @@ const STORAGE_KEY = "word-mask-rules";
 const MASK_CHAR = "■";
 
 /* =========================
-   初期ルール（デフォルト）
+   初期ルール（デフォルト）※全て正規表現として扱う
 ========================= */
 const DEFAULT_MASK_RULES = [
     { value: "コンフィック", enabled: true },
     { value: "\\d{3}-\\d{4}", enabled: true },                 // 郵便番号
-    { value: "東京都立川市錦町1-4-4立川サニーハイツ303", enabled: true },
     { value: "\\d{2,4}-\\d{2,4}-\\d{4}", enabled: true },     // 電話番号
     { value: "[a-zA-Z0-9._%+-]+@conphic\\.co\\.jp", enabled: true }, // メール
 ];
-
 
 /* =========================
    初期化
@@ -42,7 +40,6 @@ function addRuleRow() {
     tr.innerHTML = `
         <td><input type="checkbox" class="mask-enable" checked></td>
         <td><input type="text" class="mask-word"></td>
-        <td><input type="checkbox" class="mask-regex"></td>
     `;
     tbody.appendChild(tr);
     tr.querySelector(".mask-word").focus();
@@ -70,12 +67,16 @@ async function runMasking() {
     xml = maskWordXml(xml, rules);
 
     zip.file("word/document.xml", xml);
+
+    // ここは「開けた」版と合わせて blob のまま
     const blob = await zip.generateAsync({ type: "blob" });
     download(blob, file.name.replace(".docx", "_masked.docx"));
 }
 
 /* =========================
    Word XML マスキング本体
+   - <w:t> の連結 → 正規表現でマスク → 元の分割に再分配
+   - ただし escapeXml はしない（破損要因になりやすいので）
 ========================= */
 function maskWordXml(xml, rules) {
     const textNodes = [];
@@ -95,10 +96,15 @@ function maskWordXml(xml, rules) {
     const joined = textNodes.map(n => n.text).join("");
     let masked = joined;
 
-    // マスク適用
+    // マスク適用（全て正規表現として扱う）
     rules.forEach(rule => {
-        const re = new RegExp(rule.value, "g");
-        masked = masked.replace(re, m => "■".repeat(m.length));
+        try {
+            const re = new RegExp(rule.value, "g");
+            masked = masked.replace(re, m => MASK_CHAR.repeat(m.length));
+        } catch (e) {
+            console.warn("Invalid regex:", rule.value, e);
+            // 無効な正規表現はスキップ
+        }
     });
 
     // 再分配
@@ -109,11 +115,16 @@ function maskWordXml(xml, rules) {
         return part;
     });
 
-    // XML書き戻し
+    // XML 書き戻し（offset 考慮）
     let offset = 0;
     textNodes.forEach((node, i) => {
-        const replaced = node.full.replace(node.text, escapeXml(replacedNodes[i]));
-        xml = xml.slice(0, node.start + offset) + replaced + xml.slice(node.end + offset);
+        const before = xml.slice(0, node.start + offset);
+        const after = xml.slice(node.end + offset);
+
+        // full から text 部分だけ置換（タグ構造はそのまま）
+        const replaced = node.full.replace(node.text, replacedNodes[i]);
+
+        xml = before + replaced + after;
         offset += replaced.length - node.full.length;
     });
 
@@ -122,19 +133,19 @@ function maskWordXml(xml, rules) {
 
 /* =========================
    ルール取得
+   - enabled のものだけ
+   - isRegex は廃止
 ========================= */
 function getEnabledRules() {
     return Array.from(document.querySelectorAll("#maskTable tbody tr"))
         .map(tr => {
             const enable = tr.querySelector(".mask-enable");
             const word = tr.querySelector(".mask-word");
-            const regex = tr.querySelector(".mask-regex");
-            if (!enable || !word || !regex) return null;
-            return enable.checked
-                ? { value: word.value.trim(), isRegex: regex.checked }
-                : null;
+            if (!enable || !word) return null;
+            return enable.checked ? word.value.trim() : null;
         })
-        .filter(Boolean);
+        .filter(Boolean)
+        .map(value => ({ value }));
 }
 
 /* =========================
@@ -145,9 +156,8 @@ function saveRules() {
         .map(tr => {
             const enable = tr.querySelector(".mask-enable");
             const word = tr.querySelector(".mask-word");
-            const regex = tr.querySelector(".mask-regex");
-            if (!enable || !word || !regex) return null;
-            return { enabled: enable.checked, value: word.value, isRegex: regex.checked };
+            if (!enable || !word) return null;
+            return { enabled: enable.checked, value: word.value };
         })
         .filter(Boolean);
 
@@ -165,24 +175,31 @@ function loadRules() {
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td><input type="checkbox" class="mask-enable" ${rule.enabled ? "checked" : ""}></td>
-            <td><input type="text" class="mask-word" value="${rule.value}"></td>
-            <td><input type="checkbox" class="mask-regex" ${rule.isRegex ? "checked" : ""}></td>
+            <td><input type="text" class="mask-word" value="${escapeHtml(rule.value)}"></td>
         `;
         tbody.appendChild(tr);
     });
 }
 
 /* =========================
-   補助関数
+   ダウンロード補助
 ========================= */
-function escapeXml(str) {
-    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
 function download(blob, filename) {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = filename;
     a.click();
     URL.revokeObjectURL(a.href);
+}
+
+/* =========================
+   HTML属性用の最低限エスケープ（value="" 崩れ防止）
+   ※ XML に入れるエスケープではない
+========================= */
+function escapeHtml(s) {
+    return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
 }
