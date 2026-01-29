@@ -1,15 +1,38 @@
-/* style.css */
+/* ========== Theme tokens ========== */
 :root {
+    /* Dark (default) */
     --bg: #0b0f14;
+    --bg2: #0f1622;
     --card: #121924;
     --text: #e7eefc;
     --muted: #9fb0cc;
     --line: #223046;
     --accent: #5aa9ff;
     --danger: #ff5a73;
-    --ok: #34d399;
+
+    --shadow: 0 10px 35px rgba(0, 0, 0, .35);
+
+    --radius-lg: 14px;
+    --radius-md: 12px;
+    --radius-sm: 10px;
+
+    --pad-lg: 16px;
 }
 
+html[data-theme="light"] {
+    --bg: #f6f7fb;
+    --bg2: #ffffff;
+    --card: #ffffff;
+    --text: #0b0f14;
+    --muted: #4b5563;
+    --line: #e5e7eb;
+    --accent: #2563eb;
+    --danger: #dc2626;
+
+    --shadow: 0 10px 30px rgba(0, 0, 0, .10);
+}
+
+/* ========== Base ========== */
 * {
     box-sizing: border-box;
 }
@@ -22,14 +45,40 @@ body {
 body {
     margin: 0;
     font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", sans-serif;
-    background: radial-gradient(1200px 800px at 20% 0%, #122038 0%, var(--bg) 60%);
     color: var(--text);
+    background:
+        radial-gradient(1200px 800px at 20% 0%, color-mix(in oklab, var(--accent) 18%, var(--bg)) 0%, var(--bg) 60%);
 }
 
+code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Noto Sans Mono", monospace;
+    font-size: 0.95em;
+    background: color-mix(in oklab, var(--bg2) 92%, var(--bg) 8%);
+    border: 1px solid var(--line);
+    padding: 1px 6px;
+    border-radius: 999px;
+}
+
+/* ========== Layout ========== */
 .container {
     max-width: 980px;
     margin: 0 auto;
     padding: 24px 16px 48px;
+}
+
+.header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.headerActions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-shrink: 0;
 }
 
 h1 {
@@ -39,23 +88,32 @@ h1 {
 }
 
 .sub {
+    margin: 0;
     color: var(--muted);
     line-height: 1.6;
-    margin: 0 0 18px;
 }
 
+/* ========== Card ========== */
 .card {
     background: color-mix(in oklab, var(--card) 92%, #000 8%);
     border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 16px;
-    box-shadow: 0 10px 35px rgba(0, 0, 0, .35);
+    border-radius: var(--radius-lg);
+    padding: var(--pad-lg);
+    box-shadow: var(--shadow);
 }
 
 section {
-    margin-bottom: 16px;
+    margin: 0;
 }
 
+/* ========== Typography helpers ========== */
+.mini {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+/* ========== Inputs ========== */
 label {
     display: block;
     font-weight: 700;
@@ -66,29 +124,35 @@ label {
 
 input[type="file"] {
     width: 100%;
+    padding: 10px 0;
+    color: var(--muted);
 }
 
 input[type="text"] {
     width: 100%;
-    background: #0f1622;
+    background: var(--bg2);
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     padding: 10px 12px;
     color: var(--text);
     outline: none;
 }
 
+input[type="text"]::placeholder {
+    color: color-mix(in oklab, var(--muted) 78%, var(--text));
+}
+
 input[type="text"]:focus {
     border-color: color-mix(in oklab, var(--accent) 65%, var(--line));
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 18%, transparent);
 }
 
-.mini {
-    color: var(--muted);
-    font-size: 12px;
-    line-height: 1.5;
-    margin-top: 6px;
+input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
 }
 
+/* ========== Rows ========== */
 .row {
     display: flex;
     gap: 10px;
@@ -96,22 +160,28 @@ input[type="text"]:focus {
     flex-wrap: wrap;
 }
 
+.spacer {
+    flex: 1;
+}
+
+/* ========== Buttons ========== */
 .btn {
     appearance: none;
     border: 1px solid var(--line);
-    background: #0f1622;
+    background: var(--bg2);
     color: var(--text);
     padding: 10px 12px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     cursor: pointer;
     user-select: none;
     font-weight: 700;
     letter-spacing: .01em;
-    transition: transform .02s ease, border-color .15s ease;
+    transition: transform .02s ease, border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
 
 .btn:hover {
     border-color: color-mix(in oklab, var(--accent) 55%, var(--line));
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .18);
 }
 
 .btn:active {
@@ -119,7 +189,9 @@ input[type="text"]:focus {
 }
 
 .btn.primary {
-    background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 55%, #0f1622), #0f1622);
+    background: linear-gradient(180deg,
+            color-mix(in oklab, var(--accent) 48%, var(--bg2)),
+            var(--bg2));
     border-color: color-mix(in oklab, var(--accent) 55%, var(--line));
 }
 
@@ -127,31 +199,123 @@ input[type="text"]:focus {
     border-color: color-mix(in oklab, var(--danger) 55%, var(--line));
 }
 
+.btn.danger:hover {
+    border-color: color-mix(in oklab, var(--danger) 75%, var(--line));
+}
+
+.btn:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+#runBtn {
+    margin-top: 12px;
+}
+
+/* ========== Table ========== */
+.tableWrap {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: color-mix(in oklab, var(--bg2) 80%, var(--card));
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
-    overflow: hidden;
-    border-radius: 12px;
 }
 
-th,
-td {
-    border-bottom: 1px solid var(--line);
-    padding: 10px 8px;
+thead th {
     text-align: left;
-}
-
-th {
-    color: var(--muted);
+    padding: 10px 10px;
     font-size: 12px;
+    color: var(--muted);
+    background: color-mix(in oklab, var(--bg2) 88%, var(--card));
+    border-bottom: 1px solid var(--line);
 }
 
-td {
-    font-size: 13px;
+tbody td {
+    padding: 10px 10px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: middle;
 }
 
+tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Checkbox column centered-ish */
+#maskTable td:nth-child(2),
+#maskTable th:nth-child(2) {
+    text-align: center;
+}
+
+/* Reduce button size inside table */
+#maskTable .btn {
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-weight: 700;
+}
+
+/* ========== Drag & Drop ========== */
+.dragHandle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--bg2);
+    cursor: grab;
+    user-select: none;
+}
+
+.dragHandle:active {
+    cursor: grabbing;
+}
+
+.dragHandle:hover {
+    border-color: color-mix(in oklab, var(--accent) 55%, var(--line));
+}
+
+tr.is-dragging {
+    opacity: .55;
+}
+
+tr.drag-over-top {
+    box-shadow: inset 0 2px 0 0 color-mix(in oklab, var(--accent) 55%, transparent);
+}
+
+tr.drag-over-bottom {
+    box-shadow: inset 0 -2px 0 0 color-mix(in oklab, var(--accent) 55%, transparent);
+}
+
+/* ========== Footer ========== */
 footer {
-    margin-top: 16px;
+    margin-top: 14px;
     color: var(--muted);
     font-size: 12px;
+    text-align: center;
+}
+
+/* ========== Responsive tweaks ========== */
+@media (max-width: 640px) {
+    .header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .headerActions {
+        justify-content: flex-start;
+    }
+
+    .btn {
+        width: 100%;
+    }
+
+    #maskTable .btn {
+        width: auto;
+    }
 }

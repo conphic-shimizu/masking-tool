@@ -1,38 +1,68 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-theme="dark">
 
 <head>
-    <meta charset="UTF-8">
-    <title>Officeマスキングツール</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>マスキングツール</title>
+    <link rel="stylesheet" href="style.css?v=1" />
 </head>
 
 <body>
     <div class="container">
-        <h1>Officeマスキングツール（Word / PowerPoint）</h1>
+        <header class="header">
+            <div>
+                <h1>Word / PowerPoint マスキングツール</h1>
+            </div>
+
+            <div class="headerActions">
+                <button id="themeToggle" type="button" class="btn">🌓 テーマ切替</button>
+            </div>
+        </header>
+
         <div class="card">
             <section>
-                <label for="fileInput">マスキング対象のファイル（.docx / .pptx）を選択してください。</label>
-                <input type="file" id="fileInput" accept=".docx,.pptx">
+                <label for="fileInput">マスキングするファイル（.docx / .pptx）を選択してください。</label>
+                <input type="file" id="fileInput" accept=".docx,.pptx" />
             </section>
 
-            <section>
-                <label>マスキング対象文字列（固定文字列）</label>
-                <table id="maskTable">…</table>
+            <section style="margin-top:16px;">
+                <label>マスキング対象文字列（固定文字列・正規表現不可）</label>
+                <p class="mini">追加した文字列はブラウザのローカルストレージに保存されます。</p>
 
-                <div class="row" style="margin-top:10px;">
-                    <button id="addRowBtn" type="button" class="btn">＋ 行を追加</button>
-                    <button id="runBtn" class="btn primary">マスキング実行</button>
+                <div class="tableWrap" style="margin-top:10px;">
+                    <table id="maskTable">
+                        <thead>
+                            <tr>
+                                <th style="width:60px;"></th>
+                                <th style="width:90px;">処理</th>
+                                <th>マスキングする文字列</th>
+                                <th style="width:90px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- JSで描画 -->
+                        </tbody>
+                    </table>
                 </div>
+
+                <div class="row" style="margin-top:12px;">
+                    <button id="addRowBtn" type="button" class="btn">＋ 行を追加</button>
+                    <button id="resetRulesBtn" type="button" class="btn danger">マスキングルール初期化</button>
+                    <div class="spacer"></div>
+                </div>
+                <button id="runBtn" type="button" class="btn primary">マスキング実行</button>
             </section>
         </div>
 
-        <footer>バージョン: 1.1（Word/PPTX対応）</footer>
+        <footer>
+            ©株式会社コンフィック
+        </footer>
     </div>
 
+    <!-- JSZip（手元に置いてる想定） -->
     <script src="lib/jszip.min.js"></script>
-    <script src="main.js"></script>
+    <script src="main.js?v=1"></script>
 </body>
 
 </html>
