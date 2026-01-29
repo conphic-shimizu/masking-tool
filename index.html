@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Wordマスキングツール v1.0.0</title>
+    <title>Wordマスキングツール</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
@@ -14,49 +14,42 @@
         }
 
         h1 {
-            margin-bottom: 4px;
-        }
-
-        #version {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 24px;
-        }
-
-        label {
-            font-weight: bold;
-        }
-
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-
-        section {
             margin-bottom: 24px;
         }
 
         table {
-            border-collapse: collapse;
             width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12px;
         }
 
         th,
         td {
-            border: 1px solid #ccc;
+            border: 1px solid #aaa;
             padding: 6px;
             text-align: left;
+        }
+
+        button {
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 6px;
+        }
+
+        footer {
+            margin-top: 40px;
+            font-size: 12px;
+            color: #555;
         }
     </style>
 </head>
 
 <body>
-    <h1>Word マスキングツール</h1>
-    <div id="version">Version: 1.0.0</div>
+    <h1>Wordマスキングツール</h1>
 
     <section>
-        <label for="fileInput">Wordファイル（.docx）</label><br>
+        <label for="fileInput">Wordファイル (.docx)</label><br>
         <input type="file" id="fileInput" accept=".docx">
     </section>
 
@@ -70,18 +63,19 @@
                 </tr>
             </thead>
             <tbody>
-                <!-- 初期ルールはJSでロード -->
+                <!-- デフォルトルールはJS側で追加 -->
             </tbody>
         </table>
         <button id="addRowBtn" type="button">＋ 行を追加</button>
-        <button id="delRowBtn" type="button">－ 行を削除</button>
     </section>
 
     <button id="runBtn">マスキング実行</button>
 
-    <!-- ライブラリ -->
+    <footer>
+        Wordマスキングツール v1.0
+    </footer>
+
     <script src="lib/jszip.min.js"></script>
-    <!-- メイン処理 -->
     <script src="main.js"></script>
 </body>
 
