@@ -1,14 +1,14 @@
 const STORAGE_KEY = "word-mask-rules";
 const MASK_CHAR = "■";
 
-// デフォルトマスキングルール
+// デフォルトルール
 const DEFAULT_MASK_RULES = [
-    { value: "コンフィック", enabled: true, isRegex: true },
-    { value: "190-0022", enabled: true, isRegex: false },
-    { value: "東京都立川市錦町1-4-4立川サニーハイツ303", enabled: true, isRegex: false },
-    { value: "042-595-7557", enabled: true, isRegex: false },
-    { value: "042-595-7558", enabled: true, isRegex: false },
-    { value: "@conphic.co.jp", enabled: true, isRegex: true }
+    { value: "コンフィック", enabled: true },
+    { value: "190-0022", enabled: true },
+    { value: "東京都立川市錦町1-4-4立川サニーハイツ303", enabled: true },
+    { value: "042-595-7557", enabled: true },
+    { value: "042-595-7558", enabled: true },
+    { value: "@conphic.co.jp", enabled: true }
 ];
 
 // 初期化
@@ -27,13 +27,12 @@ function bindEvents() {
 }
 
 // 行追加
-function addRuleRow(rule = { value: "", enabled: true, isRegex: false }) {
+function addRuleRow(rule = { value: "", enabled: true }) {
     const tbody = document.querySelector("#maskTable tbody");
     const tr = document.createElement("tr");
     tr.innerHTML = `
         <td><input type="checkbox" class="mask-enable" ${rule.enabled ? "checked" : ""}></td>
         <td><input type="text" class="mask-word" value="${rule.value}"></td>
-        <td><input type="checkbox" class="mask-regex" ${rule.isRegex ? "checked" : ""}></td>
     `;
     tbody.appendChild(tr);
     saveRules();
@@ -42,13 +41,8 @@ function addRuleRow(rule = { value: "", enabled: true, isRegex: false }) {
 // 有効ルール取得
 function getEnabledRules() {
     return Array.from(document.querySelectorAll("#maskTable tbody tr"))
-        .map(tr => {
-            const enable = tr.querySelector(".mask-enable");
-            const word = tr.querySelector(".mask-word");
-            const regex = tr.querySelector(".mask-regex");
-            if (!enable || !word || !regex) return null;
-            return enable.checked ? { value: word.value.trim(), isRegex: regex.checked } : null;
-        })
+        .filter(tr => tr.querySelector(".mask-enable").checked)
+        .map(tr => tr.querySelector(".mask-word").value.trim())
         .filter(Boolean);
 }
 
@@ -76,7 +70,7 @@ async function runMasking() {
 }
 
 // Word XMLマスキング本体
-function maskWordXml(xml, rules) {
+function maskWordXml(xml, words) {
     const textNodes = [];
     const regexNode = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
     let match;
@@ -87,19 +81,11 @@ function maskWordXml(xml, rules) {
     const joined = textNodes.map(n => n.text).join("");
     let masked = joined;
 
-    rules.forEach(rule => {
-        if (rule.isRegex) {
-            try {
-                const re = new RegExp(rule.value, "g");
-                masked = masked.replace(re, m => MASK_CHAR.repeat(m.length));
-            } catch (e) {
-                console.warn("無効な正規表現:", rule.value);
-            }
-        } else {
-            const escaped = rule.value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-            const re = new RegExp(escaped, "g");
-            masked = masked.replace(re, m => MASK_CHAR.repeat(m.length));
-        }
+    // 正規表現は使わず安全に置換
+    words.forEach(word => {
+        const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const re = new RegExp(escaped, "g");
+        masked = masked.replace(re, m => MASK_CHAR.repeat(m.length));
     });
 
     // 再分配
@@ -137,14 +123,10 @@ function download(blob, filename) {
 // localStorage
 function saveRules() {
     const rules = Array.from(document.querySelectorAll("#maskTable tbody tr"))
-        .map(tr => {
-            const enable = tr.querySelector(".mask-enable");
-            const word = tr.querySelector(".mask-word");
-            const regex = tr.querySelector(".mask-regex");
-            if (!enable || !word || !regex) return null;
-            return { enabled: enable.checked, value: word.value, isRegex: regex.checked };
-        })
-        .filter(Boolean);
+        .map(tr => ({
+            enabled: tr.querySelector(".mask-enable").checked,
+            value: tr.querySelector(".mask-word").value
+        }));
     localStorage.setItem(STORAGE_KEY, JSON.stringify(rules));
 }
 
