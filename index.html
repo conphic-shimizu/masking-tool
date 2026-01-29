@@ -10,7 +10,8 @@
             font-family: sans-serif;
             max-width: 720px;
             margin: 40px auto;
-            padding: 0 16px;
+            padding: 0 16px 60px;
+            /* フッター分の余白 */
         }
 
         h1 {
@@ -36,10 +37,31 @@
             margin-bottom: 24px;
         }
 
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        table,
+        th,
+        td {
+            border: 1px solid #ccc;
+        }
+
+        th,
+        td {
+            padding: 6px;
+            text-align: left;
+        }
+
         footer {
-            margin-top: 40px;
-            font-size: 12px;
-            color: #666;
+            font-size: 14px;
+            color: #333;
+            text-align: right;
+            margin-top: 20px;
+            border-top: 1px solid #ccc;
+            padding-top: 6px;
         }
     </style>
 </head>
@@ -54,8 +76,7 @@
 
     <section>
         <label>マスキング対象文字列</label>
-
-        <table id="maskTable" border="1" cellpadding="6">
+        <table id="maskTable">
             <thead>
                 <tr>
                     <th>有効</th>
@@ -63,19 +84,16 @@
                 </tr>
             </thead>
             <tbody>
-                <!-- ルールはJSで初期化 -->
+                <!-- ルールはJSでロード -->
             </tbody>
         </table>
-
         <button id="addRowBtn" type="button">＋ 行を追加</button>
-        <button id="deleteRowBtn" type="button">－ 選択行を削除</button>
+        <button id="delRowBtn" type="button">－ 行を削除</button>
     </section>
 
     <button id="runBtn">マスキング実行</button>
 
-    <footer id="footerVersion">
-        <!-- JSでバージョン表示 -->
-    </footer>
+    <footer id="footerVersion"></footer>
 
     <!-- ライブラリ -->
     <script src="lib/jszip.min.js"></script>
