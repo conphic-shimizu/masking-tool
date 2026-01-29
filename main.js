@@ -4,13 +4,14 @@ const MASK_CHAR = "■";
 /* =========================
    初期ルール（デフォルト）
 ========================= */
+
 const DEFAULT_MASK_RULES = [
-    { value: "コンフィック", enabled: true },
+    { value: "(株式会社)?コンフィック", enabled: true },
+    { value: "東京都立川市錦町1-4-4立川サニーハイツ303", enabled: true },
     { value: "\\d{3}-\\d{4}", enabled: true },
-    { value: "\\d{2,4}-\\d{2,4}-\\d{4}", enabled: true },
+    { value: "[0-9０-９]{2,4}[0-9０-９]{2,4}[0-9０-９]{4}", enabled: true },
     { value: "[a-zA-Z0-9._%+-]+@conphic\\.co\\.jp", enabled: true },
 ];
-
 
 /* =========================
    初期化
