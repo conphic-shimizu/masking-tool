@@ -12,7 +12,8 @@ const DEFAULT_MASK_RULES = [
     { value: "東京都立川市錦町1-4-4立川サニーハイツ303", enabled: true },
     { value: "190-0022", enabled: true },
     { value: "042-595-7557", enabled: true },
-    { value: "xxx@conphic.co.jp", enabled: false }, // 例：必要ならユーザーが実値に差し替え
+    { value: "042-595-7558", enabled: true },
+    { value: "daichi@conphic.co.jp", enabled: false }, // 例：必要ならユーザーが実値に差し替え
 ];
 
 /* =========================
