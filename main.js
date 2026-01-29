@@ -28,23 +28,15 @@ document.getElementById("runBtn").addEventListener("click", async () => {
         return;
     }
 
-    const maskWords = Array.from(
-        document.querySelectorAll("#maskTable tbody tr")
-    )
-        .filter(tr => tr.querySelector(".mask-enable").checked)
-        .map(tr => tr.querySelector(".mask-word").value.trim())
-        .filter(Boolean);
-
-    if (maskWords.length === 0) {
-        alert("マスキング対象の文字列がありません");
+    const rules = getEnabledRules();
+    if (rules.length === 0) {
+        alert("マスキング対象がありません");
         return;
     }
 
-    // ① WordファイルをZIPとして読み込む
     const arrayBuffer = await file.arrayBuffer();
     const zip = await JSZip.loadAsync(arrayBuffer);
 
-    // ② document.xml を取得
     const docXmlFile = zip.file("word/document.xml");
     if (!docXmlFile) {
         alert("document.xml が見つかりません");
@@ -53,27 +45,90 @@ document.getElementById("runBtn").addEventListener("click", async () => {
 
     let xml = await docXmlFile.async("string");
 
-    // ③ マスキング処理
-    const maskChar = "■";
+    xml = maskWordXml(xml, rules);
 
-    maskWords.forEach(word => {
-        const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const mask = maskChar.repeat(word.length);
-        const regex = new RegExp(escaped, "g");
-        xml = xml.replace(regex, mask);
-    });
-
-    // ④ 書き戻す
     zip.file("word/document.xml", xml);
 
-    // ⑤ 新しいdocxを生成
     const blob = await zip.generateAsync({ type: "blob" });
     download(blob, file.name.replace(".docx", "_masked.docx"));
 });
 
 /* =========================
-   ダウンロード
+   Word XML マスキング本体
 ========================= */
+function maskWordXml(xml, words) {
+    // <w:t>...</w:t> を全部拾う
+    const textNodes = [];
+    const regex = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
+
+    let match;
+    while ((match = regex.exec(xml)) !== null) {
+        textNodes.push({
+            full: match[0],
+            text: match[1],
+            start: match.index,
+            end: regex.lastIndex
+        });
+    }
+
+    // 連結テキスト
+    const joined = textNodes.map(n => n.text).join("");
+    let masked = joined;
+
+    const maskChar = "■";
+
+    words.forEach(word => {
+        const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const re = new RegExp(escaped, "g");
+        masked = masked.replace(re, m => maskChar.repeat(m.length));
+    });
+
+    // 再分配
+    let cursor = 0;
+    const replacedNodes = textNodes.map(n => {
+        const len = n.text.length;
+        const part = masked.slice(cursor, cursor + len);
+        cursor += len;
+        return part;
+    });
+
+    // XML 書き戻し
+    let offset = 0;
+    textNodes.forEach((node, i) => {
+        const before = xml.slice(0, node.start + offset);
+        const after = xml.slice(node.end + offset);
+
+        const replaced = node.full.replace(
+            node.text,
+            escapeXml(replacedNodes[i])
+        );
+
+        xml = before + replaced + after;
+        offset += replaced.length - node.full.length;
+    });
+
+    return xml;
+}
+
+/* =========================
+   補助関数
+========================= */
+function getEnabledRules() {
+    return Array.from(
+        document.querySelectorAll("#maskTable tbody tr")
+    )
+        .filter(tr => tr.querySelector(".mask-enable").checked)
+        .map(tr => tr.querySelector(".mask-word").value.trim())
+        .filter(Boolean);
+}
+
+function escapeXml(str) {
+    return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+}
+
 function download(blob, filename) {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -83,31 +138,25 @@ function download(blob, filename) {
 }
 
 /* =========================
-   ルール保存
+   localStorage
 ========================= */
 function saveRules() {
     const rules = Array.from(
         document.querySelectorAll("#maskTable tbody tr")
-    ).map(tr => {
-        return {
-            enabled: tr.querySelector(".mask-enable").checked,
-            value: tr.querySelector(".mask-word").value
-        };
-    });
+    ).map(tr => ({
+        enabled: tr.querySelector(".mask-enable").checked,
+        value: tr.querySelector(".mask-word").value
+    }));
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(rules));
 }
 
-/* =========================
-   ルール復元
-========================= */
 function loadRules() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (!saved) return;
 
     const rules = JSON.parse(saved);
     const tbody = document.querySelector("#maskTable tbody");
-
     tbody.innerHTML = "";
 
     rules.forEach(rule => {
@@ -124,9 +173,6 @@ function loadRules() {
     });
 }
 
-/* =========================
-   入力変更時に自動保存
-========================= */
 document
     .querySelector("#maskTable tbody")
     .addEventListener("input", saveRules);
@@ -135,9 +181,4 @@ document
     .querySelector("#maskTable tbody")
     .addEventListener("change", saveRules);
 
-/* =========================
-   初期化
-========================= */
-document.addEventListener("DOMContentLoaded", () => {
-    loadRules();
-});
+document.addEventListener("DOMContentLoaded", loadRules);
