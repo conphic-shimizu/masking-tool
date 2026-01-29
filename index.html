@@ -4,43 +4,38 @@
 <head>
     <meta charset="UTF-8">
     <title>Wordマスキングツール</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         body {
             font-family: sans-serif;
-            max-width: 720px;
-            margin: 40px auto;
-            padding: 0 16px;
-        }
-
-        h1 {
-            margin-bottom: 24px;
+            padding: 20px;
         }
 
         table {
-            width: 100%;
             border-collapse: collapse;
-            margin-bottom: 12px;
+            width: 100%;
+            margin-bottom: 20px;
         }
 
         th,
         td {
-            border: 1px solid #aaa;
+            border: 1px solid #ccc;
             padding: 6px;
             text-align: left;
         }
 
-        button {
-            padding: 8px 16px;
-            font-size: 14px;
-            cursor: pointer;
-            margin-top: 6px;
+        input[type="text"] {
+            width: 100%;
         }
 
-        footer {
-            margin-top: 40px;
-            font-size: 12px;
-            color: #555;
+        button {
+            margin-right: 10px;
+            padding: 6px 12px;
+        }
+
+        tfoot {
+            font-size: 0.9em;
+            color: #666;
         }
     </style>
 </head>
@@ -48,34 +43,29 @@
 <body>
     <h1>Wordマスキングツール</h1>
 
-    <section>
-        <label for="fileInput">Wordファイル (.docx)</label><br>
+    <div>
         <input type="file" id="fileInput" accept=".docx">
-    </section>
+        <button id="runBtn">マスキング実行</button>
+        <button id="addRowBtn">行追加</button>
+    </div>
 
-    <section>
-        <label>マスキング対象文字列</label>
-        <table id="maskTable">
-            <thead>
-                <tr>
-                    <th>有効</th>
-                    <th>文字列</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- デフォルトルールはJS側で追加 -->
-            </tbody>
-        </table>
-        <button id="addRowBtn" type="button">＋ 行を追加</button>
-    </section>
-
-    <button id="runBtn">マスキング実行</button>
+    <table id="maskTable">
+        <thead>
+            <tr>
+                <th>有効</th>
+                <th>文字列</th>
+                <th>正規表現</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- 初期ルールはJSで自動読み込み -->
+        </tbody>
+    </table>
 
     <footer>
-        Wordマスキングツール v1.0
+        <p>バージョン 1.0.0</p>
     </footer>
 
-    <script src="lib/jszip.min.js"></script>
     <script src="main.js"></script>
 </body>
 
