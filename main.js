@@ -4,6 +4,18 @@
 const STORAGE_KEY = "word-mask-rules";
 const MASK_CHAR = "■";
 
+/* ==============================
+   デフォルトのマスキングプリセット
+============================== */
+const DEFAULT_MASK_RULES = [
+    { value: "コンフィック", enabled: true },
+    { value: "190-0022", enabled: true },
+    { value: "東京都立川市錦町1-4-4立川サニーハイツ303", enabled: true }
+    { value: "042-595-7557", enabled: true }
+    { value: "042-595-7558", enabled: true }
+    { value: "@conphic.co.jp", enabled: true }
+];
+
 /* =====================================================
    初期化
 ===================================================== */
@@ -169,13 +181,23 @@ function saveRules() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(rules));
 }
 
+/* ==============================
+   ルール読み込み
+============================== */
 function loadRules() {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return;
-
-    const rules = JSON.parse(saved);
     const tbody = document.querySelector("#maskTable tbody");
     tbody.innerHTML = "";
+
+    const saved = localStorage.getItem(STORAGE_KEY);
+    let rules;
+
+    if (saved) {
+        // 保存済みルールがあればそれを優先
+        rules = JSON.parse(saved);
+    } else {
+        // 初回はプリセットを使用
+        rules = DEFAULT_MASK_RULES;
+    }
 
     rules.forEach(rule => {
         const tr = document.createElement("tr");
@@ -186,6 +208,7 @@ function loadRules() {
         tbody.appendChild(tr);
     });
 }
+
 
 /* =====================================================
    補助関数
