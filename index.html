@@ -3,28 +3,28 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Wordマスキングツール</title>
+    <title>Wordマスキングツール v1.0.0</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
             font-family: sans-serif;
             max-width: 720px;
             margin: 40px auto;
-            padding: 0 16px 60px;
-            /* フッター分の余白 */
+            padding: 0 16px;
         }
 
         h1 {
+            margin-bottom: 4px;
+        }
+
+        #version {
+            font-size: 14px;
+            color: #666;
             margin-bottom: 24px;
         }
 
         label {
             font-weight: bold;
-        }
-
-        textarea {
-            width: 100%;
-            box-sizing: border-box;
         }
 
         button {
@@ -40,34 +40,20 @@
         table {
             border-collapse: collapse;
             width: 100%;
-            margin-bottom: 8px;
         }
 
-        table,
         th,
         td {
             border: 1px solid #ccc;
-        }
-
-        th,
-        td {
             padding: 6px;
             text-align: left;
-        }
-
-        footer {
-            font-size: 14px;
-            color: #333;
-            text-align: right;
-            margin-top: 20px;
-            border-top: 1px solid #ccc;
-            padding-top: 6px;
         }
     </style>
 </head>
 
 <body>
     <h1>Word マスキングツール</h1>
+    <div id="version">Version: 1.0.0</div>
 
     <section>
         <label for="fileInput">Wordファイル（.docx）</label><br>
@@ -84,7 +70,7 @@
                 </tr>
             </thead>
             <tbody>
-                <!-- ルールはJSでロード -->
+                <!-- 初期ルールはJSでロード -->
             </tbody>
         </table>
         <button id="addRowBtn" type="button">＋ 行を追加</button>
@@ -92,8 +78,6 @@
     </section>
 
     <button id="runBtn">マスキング実行</button>
-
-    <footer id="footerVersion"></footer>
 
     <!-- ライブラリ -->
     <script src="lib/jszip.min.js"></script>

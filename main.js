@@ -1,41 +1,19 @@
-/* =====================================================
-   定数
-===================================================== */
 const STORAGE_KEY = "word-mask-rules";
 const MASK_CHAR = "■";
-const APP_VERSION = "1.0.0";
-
-/* ==============================
-   デフォルトマスクプリセット
-============================== */
 const DEFAULT_MASK_RULES = [
-    { value: "株式会社コンフィック", enabled: true },
-    { value: "190-0022", enabled: true },
-    { value: "東京都立川市錦町1-4-4立川サニーハイツ303", enabled: true },
-    { value: "042-595-7557", enabled: true },
-    { value: "042-595-7558", enabled: true }
+    { value: "社名", enabled: true },
+    { value: "電話番号", enabled: true },
+    { value: "氏名", enabled: true }
 ];
 
-/* =====================================================
-   初期化
-===================================================== */
 document.addEventListener("DOMContentLoaded", () => {
     bindEvents();
     loadRules();
-    displayVersion();
 });
 
-/* =====================================================
-   バージョン表示
-===================================================== */
-function displayVersion() {
-    const footer = document.getElementById("footerVersion");
-    footer.textContent = `Wordマスキングツール - Version ${APP_VERSION}`;
-}
-
-/* =====================================================
+/* =========================
    イベント登録
-===================================================== */
+========================= */
 function bindEvents() {
     document.getElementById("addRowBtn").addEventListener("click", addRuleRow);
     document.getElementById("delRowBtn").addEventListener("click", deleteRuleRow);
@@ -46,18 +24,16 @@ function bindEvents() {
     tbody.addEventListener("change", saveRules);
 }
 
-/* =====================================================
+/* =========================
    ルール操作
-===================================================== */
+========================= */
 function addRuleRow() {
     const tbody = document.querySelector("#maskTable tbody");
     const tr = document.createElement("tr");
-
     tr.innerHTML = `
         <td><input type="checkbox" class="mask-enable" checked></td>
         <td><input type="text" class="mask-word"></td>
     `;
-
     tbody.appendChild(tr);
     tr.querySelector(".mask-word").focus();
     saveRules();
@@ -71,12 +47,15 @@ function deleteRuleRow() {
     }
 }
 
-/* =====================================================
+/* =========================
    マスキング実行
-===================================================== */
+========================= */
 async function runMasking() {
-    const file = getSelectedFile();
-    if (!file) return;
+    const file = document.getElementById("fileInput").files[0];
+    if (!file) {
+        alert("Wordファイルを選択してください");
+        return;
+    }
 
     const rules = getEnabledRules();
     if (rules.length === 0) {
@@ -102,13 +81,12 @@ async function runMasking() {
     download(blob, file.name.replace(".docx", "_masked.docx"));
 }
 
-/* =====================================================
-   Word XML マスキング本体
-===================================================== */
+/* =========================
+   XMLマスキング処理
+========================= */
 function maskWordXml(xml, words) {
     const textNodes = [];
     const regex = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
-
     let match;
     while ((match = regex.exec(xml)) !== null) {
         textNodes.push({
@@ -146,15 +124,9 @@ function maskWordXml(xml, words) {
     return xml;
 }
 
-/* =====================================================
+/* =========================
    補助関数
-===================================================== */
-function getSelectedFile() {
-    const file = document.getElementById("fileInput").files[0];
-    if (!file) alert("Wordファイルを選択してください");
-    return file || null;
-}
-
+========================= */
 function escapeXml(str) {
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -178,9 +150,9 @@ function download(blob, filename) {
     URL.revokeObjectURL(a.href);
 }
 
-/* =====================================================
+/* =========================
    localStorage
-===================================================== */
+========================= */
 function saveRules() {
     const rules = Array.from(document.querySelectorAll("#maskTable tbody tr"))
         .map(tr => {
@@ -202,13 +174,7 @@ function loadRules() {
     tbody.innerHTML = "";
 
     const saved = localStorage.getItem(STORAGE_KEY);
-    let rules;
-
-    if (saved) {
-        rules = JSON.parse(saved);
-    } else {
-        rules = DEFAULT_MASK_RULES;
-    }
+    const rules = saved ? JSON.parse(saved) : DEFAULT_MASK_RULES;
 
     rules.forEach(rule => {
         const tr = document.createElement("tr");
