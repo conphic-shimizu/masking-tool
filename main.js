@@ -9,7 +9,7 @@ const DEFAULT_MASK_RULES = [
     { value: "(株式会社)?コンフィック", enabled: true },
     { value: "東京都立川市錦町1-4-4立川サニーハイツ303", enabled: true },
     { value: "\\d{3}-\\d{4}", enabled: true },
-    { value: "[0-9０-９]{2,4}[0-9０-９]{2,4}[0-9０-９]{4}", enabled: true },
+    { value: "[0-9０-９]{2,4}[-‐-–−ー]?[0-9０-９]{2,4}[-‐-–−ー]?[0-9０-９]{4}", enabled: true },
     { value: "[a-zA-Z0-9._%+-]+@conphic\\.co\\.jp", enabled: true },
 ];
 
@@ -117,20 +117,24 @@ function maskWordXml(xml, rules) {
         return part;
     });
 
-    // XML 書き戻し（offset 考慮）
+    // XML 書き戻し
     let offset = 0;
     textNodes.forEach((node, i) => {
         const before = xml.slice(0, node.start + offset);
         const after = xml.slice(node.end + offset);
 
-        // full から text 部分だけ置換（タグ構造はそのまま）
-        const replaced = node.full.replace(node.text, replacedNodes[i]);
+        const replaced = replaceWtInner(node.full, escapeXml(replacedNodes[i]));
 
         xml = before + replaced + after;
         offset += replaced.length - node.full.length;
     });
 
     return xml;
+
+    // <w:t>の内側だけ安全に差し替える
+    function replaceWtInner(fullWt, newInner) {
+        return fullWt.replace(/(<w:t[^>]*>)([\s\S]*?)(<\/w:t>)/, `$1${newInner}$3`);
+    }
 }
 
 /* =========================
