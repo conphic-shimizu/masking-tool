@@ -13,7 +13,7 @@ const DEFAULT_MASK_RULES = [
     { value: "190-0022", enabled: true },
     { value: "042-595-7557", enabled: true },
     { value: "042-595-7558", enabled: true },
-    { value: "daichi@conphic.co.jp", enabled: false },
+    { value: "daichi@conphic.co.jp", enabled: true },
 ];
 
 document.addEventListener("DOMContentLoaded", () => {
