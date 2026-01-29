@@ -1,2 +1,65 @@
-<script src="lib/jszip.min.js"></script>
-<script src="main.js"></script>
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Wordマスキングツール</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 720px;
+            margin: 40px auto;
+            padding: 0 16px;
+        }
+
+        h1 {
+            margin-bottom: 24px;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        textarea {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        section {
+            margin-bottom: 24px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Word マスキングツール</h1>
+
+    <section>
+        <label for="fileInput">Wordファイル（.docx）</label><br>
+        <input type="file" id="fileInput" accept=".docx">
+    </section>
+
+    <section>
+        <label for="maskWords">マスキングする文字列（1行1つ）</label><br>
+        <textarea id="maskWords" rows="6" placeholder="例：
+山田太郎
+test@example.com
+090-1234-5678"></textarea>
+    </section>
+
+    <button id="runBtn">マスキング実行</button>
+
+    <!-- ライブラリ -->
+    <script src="lib/jszip.min.js"></script>
+    <!-- メイン処理 -->
+    <script src="main.js"></script>
+</body>
+
+</html>
