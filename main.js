@@ -8,9 +8,12 @@ const MASK_CHAR = "■";
    デフォルトのマスキングプリセット
 ============================== */
 const DEFAULT_MASK_RULES = [
-    { value: "社名", enabled: true, isRegex: false },
-    { value: "電話番号", enabled: true, isRegex: false },
-    { value: "氏名", enabled: true, isRegex: false }
+    { value: "株式会社コンフィック", enabled: true, isRegex: false },
+    { value: "190-0022", enabled: true, isRegex: false },
+    { value: "東京都立川市", enabled: true, isRegex: true },
+    { value: "042-595-7557", enabled: true, isRegex: false },
+    { value: "042-595-7558", enabled: true, isRegex: false },
+    { value: "@conphic.co.jp", enabled: true, isRegex: true }
 ];
 
 /* =====================================================
