@@ -143,10 +143,20 @@ function download(blob, filename) {
 function saveRules() {
     const rules = Array.from(
         document.querySelectorAll("#maskTable tbody tr")
-    ).map(tr => ({
-        enabled: tr.querySelector(".mask-enable").checked,
-        value: tr.querySelector(".mask-word").value
-    }));
+    )
+        .map(tr => {
+            const enable = tr.querySelector(".mask-enable");
+            const word = tr.querySelector(".mask-word");
+
+            // 壊れた行は無視
+            if (!enable || !word) return null;
+
+            return {
+                enabled: enable.checked,
+                value: word.value
+            };
+        })
+        .filter(Boolean);
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(rules));
 }
