@@ -87,7 +87,7 @@ async function runMasking() {
     zip.file("word/document.xml", xml);
 
     const blob = await zip.generateAsync({ type: "blob" });
-    download(blob, file.name.replace(/\.docx$/i, "_masked.docx"));
+    download(blob, file.name.replace(/\.docx$/i, "_マスキング.docx"));
 }
 
 /* =========================
