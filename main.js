@@ -3,17 +3,17 @@ const MASK_CHAR = "■";
 
 /* =========================
    初期ルール（デフォルト）
-   ※ 全て「正規表現として扱う」前提
+   ※ 全て「正規表現」として扱う
 ========================= */
 const DEFAULT_MASK_RULES = [
     { value: "(株式会社)?コンフィック", enabled: true },
     { value: "東京都立川市錦町1-4-4立川サニーハイツ303", enabled: true },
-    { value: "\\d{3}[-‐-–−ー]\\d{4}", enabled: true }, // 郵便番号：ハイフン揺れ吸収
+    { value: "\\d{3}[-‐–−ー]\\d{4}", enabled: true }, // 郵便（ハイフン揺れ吸収）
     {
         value:
-            "[0-9０-９]{2,4}[-‐-–−ー]?[0-9０-９]{2,4}[-‐-–−ー]?[0-9０-９]{4}",
+            "[0-9０-９]{2,4}[-‐–−ー]?[0-9０-９]{2,4}[-‐–−ー]?[0-9０-９]{4}",
         enabled: true,
-    }, // 電話番号：全角数字/ハイフン揺れ/ハイフン省略を吸収
+    }, // 電話（全角・ハイフン揺れ・ハイフン省略吸収）
     { value: "[a-zA-Z0-9._%+-]+@conphic\\.co\\.jp", enabled: true }, // メール
 ];
 
@@ -29,10 +29,11 @@ document.addEventListener("DOMContentLoaded", () => {
    イベント登録
 ========================= */
 function bindEvents() {
-    document.getElementById("addRowBtn").addEventListener("click", addRuleRow);
-    document.getElementById("runBtn").addEventListener("click", runMasking);
+    document.getElementById("addRowBtn")?.addEventListener("click", addRuleRow);
+    document.getElementById("runBtn")?.addEventListener("click", runMasking);
 
     const tbody = document.querySelector("#maskTable tbody");
+    if (!tbody) return;
     tbody.addEventListener("input", saveRules);
     tbody.addEventListener("change", saveRules);
 }
@@ -42,13 +43,15 @@ function bindEvents() {
 ========================= */
 function addRuleRow() {
     const tbody = document.querySelector("#maskTable tbody");
+    if (!tbody) return;
+
     const tr = document.createElement("tr");
     tr.innerHTML = `
     <td><input type="checkbox" class="mask-enable" checked></td>
     <td><input type="text" class="mask-word"></td>
   `;
     tbody.appendChild(tr);
-    tr.querySelector(".mask-word").focus();
+    tr.querySelector(".mask-word")?.focus();
     saveRules();
 }
 
@@ -57,7 +60,7 @@ function addRuleRow() {
 ========================= */
 async function runMasking() {
     const fileInput = document.getElementById("fileInput");
-    const file = fileInput.files[0];
+    const file = fileInput?.files?.[0];
     if (!file) {
         alert("Wordファイルを選択してください");
         return;
@@ -88,59 +91,67 @@ async function runMasking() {
 }
 
 /* =========================
-   Word XML マスキング本体
-   - <w:t> の連結 → 正規表現でマスク → 元の分割に再分配
-   - XMLへ戻すときに「追加エスケープはしない」
-     （Word XMLの中身は元々エスケープ済みで、追加するのは ■ なので安全）
-   - $問題を避けるため replace は関数形式で差し替え
+   Word XML マスキング本体（破損対策版）
+   - <w:t> を抽出
+   - 各 <w:t> の中身を「デコード」して実文字列に戻す
+   - 連結して正規表現でマスク（実文字列に対して）
+   - 元の分割長（実文字列の長さ）で再分配
+   - <w:t> に戻すときは escapeXml で「再エンコード」
+   ★これで &#8211; 等の数値参照を壊さない
 ========================= */
 function maskWordXml(xml, rules) {
-    const textNodes = [];
+    // <w:t ...>...</w:t>
     const wtRegex = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
+    const nodes = [];
 
-    let match;
-    while ((match = wtRegex.exec(xml)) !== null) {
-        textNodes.push({
-            full: match[0],      // <w:t ...>TEXT</w:t> 全体
-            text: match[1],      // TEXT（XML上の文字列。既に &amp; 等を含み得る）
-            start: match.index,
+    let m;
+    while ((m = wtRegex.exec(xml)) !== null) {
+        const full = m[0];
+        const innerXmlText = m[1];              // XML内文字列（&amp; や &#8211; を含む）
+        const decodedText = decodeXmlText(innerXmlText); // 実文字列に戻す
+
+        nodes.push({
+            full,
+            innerXmlText,
+            decodedText,
+            decodedLen: decodedText.length,
+            start: m.index,
             end: wtRegex.lastIndex,
         });
     }
 
-    // 連結（XML上の文字列として連結）
-    const joined = textNodes.map((n) => n.text).join("");
+    // 実文字列として連結 → マスク
+    const joined = nodes.map((n) => n.decodedText).join("");
     let masked = joined;
 
-    // 置換（全て正規表現として扱う）
     for (const rule of rules) {
         const pattern = rule.value;
         if (!pattern) continue;
 
         try {
             const re = new RegExp(pattern, "g");
-            masked = masked.replace(re, (m) => MASK_CHAR.repeat(m.length));
+            masked = masked.replace(re, (hit) => MASK_CHAR.repeat(hit.length));
         } catch (e) {
             console.warn("Invalid regex skipped:", pattern, e);
         }
     }
 
-    // 元の <w:t> の長さで再分配（XML上の長さ）
+    // 元の <w:t> の「実文字列長」で再分配
     let cursor = 0;
-    const replacedTexts = textNodes.map((n) => {
-        const part = masked.slice(cursor, cursor + n.text.length);
-        cursor += n.text.length;
+    const parts = nodes.map((n) => {
+        const part = masked.slice(cursor, cursor + n.decodedLen);
+        cursor += n.decodedLen;
         return part;
     });
 
-    // XMLへ書き戻し（offset考慮）
+    // XMLへ書き戻し：<w:t>内側だけ差し替え（関数形式で $ 問題回避）
     let offset = 0;
-    textNodes.forEach((node, i) => {
+    nodes.forEach((node, i) => {
         const before = xml.slice(0, node.start + offset);
         const after = xml.slice(node.end + offset);
 
-        // <w:t>の内側だけ差し替え（置換文字列ではなく関数で。$混入でも壊れない）
-        const replaced = replaceWtInner(node.full, replacedTexts[i]);
+        const newInner = escapeXml(parts[i]); // 実文字列 → XML用にエスケープ
+        const replaced = replaceWtInner(node.full, newInner);
 
         xml = before + replaced + after;
         offset += replaced.length - node.full.length;
@@ -149,20 +160,24 @@ function maskWordXml(xml, rules) {
     return xml;
 }
 
-// <w:t> の内側だけ安全に差し替える（$問題回避のため関数形式）
-function replaceWtInner(fullWt, newInner) {
+/* =========================
+   <w:t> 内側だけ安全に差し替え（$問題回避）
+========================= */
+function replaceWtInner(fullWt, newInnerXmlEscaped) {
     return fullWt.replace(
         /(<w:t[^>]*>)([\s\S]*?)(<\/w:t>)/,
-        (_, p1, _oldInner, p3) => p1 + newInner + p3
+        (_, p1, _old, p3) => p1 + newInnerXmlEscaped + p3
     );
 }
 
 /* =========================
    ルール取得（enabled のみ）
-   - UIは「正規表現ON/OFFなし」
 ========================= */
 function getEnabledRules() {
-    return Array.from(document.querySelectorAll("#maskTable tbody tr"))
+    const tbody = document.querySelector("#maskTable tbody");
+    if (!tbody) return [];
+
+    return Array.from(tbody.querySelectorAll("tr"))
         .map((tr) => {
             const enable = tr.querySelector(".mask-enable");
             const word = tr.querySelector(".mask-word");
@@ -177,7 +192,10 @@ function getEnabledRules() {
    localStorage
 ========================= */
 function saveRules() {
-    const rules = Array.from(document.querySelectorAll("#maskTable tbody tr"))
+    const tbody = document.querySelector("#maskTable tbody");
+    if (!tbody) return;
+
+    const rules = Array.from(tbody.querySelectorAll("tr"))
         .map((tr) => {
             const enable = tr.querySelector(".mask-enable");
             const word = tr.querySelector(".mask-word");
@@ -191,12 +209,14 @@ function saveRules() {
 
 function loadRules() {
     const tbody = document.querySelector("#maskTable tbody");
+    if (!tbody) return;
+
     tbody.innerHTML = "";
 
     const savedRaw = localStorage.getItem(STORAGE_KEY);
     const saved = savedRaw ? safeJsonParse(savedRaw, []) : [];
 
-    // DEFAULT + saved をマージ（valueで重複排除、savedでenabled/値を上書き）
+    // DEFAULT + saved をマージ（value重複排除、saved優先）
     const map = new Map();
     DEFAULT_MASK_RULES.forEach((r) => map.set(r.value, { ...r }));
     saved.forEach((r) => {
@@ -222,6 +242,32 @@ function safeJsonParse(text, fallback) {
     } catch {
         return fallback;
     }
+}
+
+/* =========================
+   XMLデコード/エンコード
+   - decode: &amp; や &#8211; を実文字に戻す
+   - escape: 実文字をXML内に戻せるようにする（& < > " '）
+========================= */
+function decodeXmlText(xmlEscapedText) {
+    // DOMParserで textContent を使うのが一番安全（数値参照も復元される）
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(`<r>${xmlEscapedText}</r>`, "application/xml");
+
+    // パース失敗時はフォールバック（壊れたテキストをそのまま扱う）
+    const parseError = doc.getElementsByTagName("parsererror")[0];
+    if (parseError) return xmlEscapedText;
+
+    return doc.documentElement.textContent ?? "";
+}
+
+function escapeXml(str) {
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
 }
 
 /* =========================
