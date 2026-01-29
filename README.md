@@ -1,0 +1,2 @@
+# masking-tool
+docs/pptxのマスキングツールです。
