@@ -47,12 +47,35 @@
     </section>
 
     <section>
-        <label for="maskWords">マスキングする文字列（1行1つ）</label><br>
-        <textarea id="maskWords" rows="6" placeholder="例：
-山田太郎
-test@example.com
-090-1234-5678"></textarea>
+        <label>マスキング対象文字列</label>
+
+        <table id="maskTable" border="1" cellpadding="6">
+            <thead>
+                <tr>
+                    <th>有効</th>
+                    <th>文字列</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- 初期ルール -->
+                <tr>
+                    <td><input type="checkbox" checked></td>
+                    <td><input type="text" value="山田太郎"></td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" checked></td>
+                    <td><input type="text" value="test@example.com"></td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" checked></td>
+                    <td><input type="text" value="090-1234-5678"></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <button id="addRowBtn" type="button">＋ 行を追加</button>
     </section>
+
 
     <button id="runBtn">マスキング実行</button>
 

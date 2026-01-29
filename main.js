@@ -1,3 +1,15 @@
+document.getElementById("addRowBtn").addEventListener("click", () => {
+    const tbody = document.querySelector("#maskTable tbody");
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+    <td><input type="checkbox" checked></td>
+    <td><input type="text"></td>
+  `;
+
+    tbody.appendChild(tr);
+});
+
 document.getElementById("runBtn").addEventListener("click", async () => {
     const fileInput = document.getElementById("fileInput");
     const file = fileInput.files[0];
@@ -7,16 +19,12 @@ document.getElementById("runBtn").addEventListener("click", async () => {
         return;
     }
 
-    const maskWords = document
-        .getElementById("maskWords")
-        .value.split("\n")
-        .map(w => w.trim())
+    const maskWords = Array.from(
+        document.querySelectorAll("#maskTable tbody tr")
+    )
+        .filter(tr => tr.querySelector("input[type=checkbox]").checked)
+        .map(tr => tr.querySelector("input[type=text]").value.trim())
         .filter(Boolean);
-
-    if (maskWords.length === 0) {
-        alert("マスキングする文字列を入力してください");
-        return;
-    }
 
     // ① WordファイルをZIPとして読み込む
     const arrayBuffer = await file.arrayBuffer();
