@@ -117,10 +117,17 @@ function getEnabledRules() {
     return Array.from(
         document.querySelectorAll("#maskTable tbody tr")
     )
-        .filter(tr => tr.querySelector(".mask-enable").checked)
-        .map(tr => tr.querySelector(".mask-word").value.trim())
+        .map(tr => {
+            const enable = tr.querySelector(".mask-enable");
+            const word = tr.querySelector(".mask-word");
+            if (!enable || !word) return null;
+            return { enable, word };
+        })
+        .filter(v => v && v.enable.checked)
+        .map(v => v.word.value.trim())
         .filter(Boolean);
 }
+
 
 function escapeXml(str) {
     return str
@@ -147,10 +154,7 @@ function saveRules() {
         .map(tr => {
             const enable = tr.querySelector(".mask-enable");
             const word = tr.querySelector(".mask-word");
-
-            // 壊れた行は無視
             if (!enable || !word) return null;
-
             return {
                 enabled: enable.checked,
                 value: word.value
