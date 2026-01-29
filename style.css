@@ -149,6 +149,7 @@ input[type="checkbox"] {
 }
 
 /* file input -> button style */
+/* file input -> button style（input隠し） */
 .fileInputHidden {
     position: absolute;
     width: 1px;
@@ -161,13 +162,16 @@ input[type="checkbox"] {
     border: 0;
 }
 
+/* ★未選択/ファイル名は “文字列表示” にする */
 .fileName {
     color: var(--muted);
     font-size: 12px;
-    padding: 8px 10px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-md);
-    background: color-mix(in oklab, var(--bg2) 80%, var(--card));
+    padding: 0;
+    /* ←枠内っぽさを消す */
+    border: none;
+    /* ←ボタン感の原因 */
+    background: transparent;
+    /* ←ボタン感の原因 */
     max-width: 520px;
     overflow: hidden;
     text-overflow: ellipsis;

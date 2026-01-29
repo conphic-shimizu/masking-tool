@@ -43,6 +43,11 @@ function toggleTheme() {
 // =========================
 function bindEvents() {
     document.getElementById("themeToggle")?.addEventListener("click", toggleTheme);
+    document.getElementById("filePickBtn")?.addEventListener("click", () => {
+        const input = document.getElementById("fileInput");
+        if (input) input.value = ""; // 同じファイルでもchangeを出す
+    });
+
 
     // ファイル選択 → ファイル名表示更新
     document.getElementById("fileInput")?.addEventListener("change", syncSelectedFileName);

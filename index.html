@@ -23,12 +23,12 @@
         <div class="card">
             <section>
                 <label for="fileInput">マスキングするファイル（.docx / .pptx）を選択してください。</label>
+                <input type="file" id="fileInput" class="fileInputHidden" accept=".docx,.pptx" />
 
                 <div class="row" style="margin-top:6px;">
-                    <label for="fileInput" class="btn">ファイルを選択</label>
+                    <label id="filePickBtn" for="fileInput" class="btn">ファイルを選択</label>
                     <span id="fileName" class="fileName">未選択</span>
                 </div>
-
             </section>
 
             <section style="margin-top:16px;">
@@ -53,8 +53,8 @@
 
                 <div class="row" style="margin-top:12px;">
                     <button id="addRowBtn" type="button" class="btn">＋ 行を追加</button>
-                    <button id="resetRulesBtn" type="button" class="btn danger">マスキングルール初期化</button>
                     <div class="spacer"></div>
+                    <button id="resetRulesBtn" type="button" class="btn danger">マスキングルール初期化</button>
                 </div>
                 <button id="runBtn" type="button" class="btn primary">マスキング実行</button>
             </section>
