@@ -139,14 +139,42 @@ function maskWordXml(xml, words) {
 function applyMask(text, words) {
     let result = text;
 
-    words.forEach(word => {
-        const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const re = new RegExp(escaped, "g");
-        result = result.replace(re, m => MASK_CHAR.repeat(m.length));
+    words.forEach(rule => {
+        if (!rule) return;
+
+        if (rule.isRegex) {
+            // 正規表現モード
+            try {
+                const re = new RegExp(rule.value, "g");
+                result = result.replace(re, m => "■".repeat(m.length));
+            } catch (e) {
+                console.warn("無効な正規表現:", rule.value);
+            }
+        } else {
+            // 通常文字列モード（完全一致）
+            const escaped = rule.value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const re = new RegExp(escaped, "g");
+            result = result.replace(re, m => "■".repeat(m.length));
+        }
     });
 
     return result;
 }
+
+function getEnabledRules() {
+    return Array.from(document.querySelectorAll("#maskTable tbody tr"))
+        .map(tr => {
+            const enable = tr.querySelector(".mask-enable");
+            const word = tr.querySelector(".mask-word");
+            const regex = tr.querySelector(".mask-regex");
+            if (!enable || !word || !regex) return null;
+            return enable.checked
+                ? { value: word.value.trim(), isRegex: regex.checked }
+                : null;
+        })
+        .filter(Boolean);
+}
+
 
 /* =====================================================
    ルール取得
@@ -170,10 +198,12 @@ function saveRules() {
         .map(tr => {
             const enable = tr.querySelector(".mask-enable");
             const word = tr.querySelector(".mask-word");
-            if (!enable || !word) return null;
+            const regex = tr.querySelector(".mask-regex");
+            if (!enable || !word || !regex) return null;
             return {
                 enabled: enable.checked,
-                value: word.value
+                value: word.value,
+                isRegex: regex.checked
             };
         })
         .filter(Boolean);
@@ -192,11 +222,16 @@ function loadRules() {
     let rules;
 
     if (saved) {
-        // 保存済みルールがあればそれを優先
         rules = JSON.parse(saved);
     } else {
-        // 初回はプリセットを使用
-        rules = DEFAULT_MASK_RULES;
+        rules = [
+            { value: "社名", enabled: true, isRegex: false },
+            { value: "郵便番号", enabled: true, isRegex: false },
+            { value: "住所", enabled: true, isRegex: false },
+            { value: "電話番号", enabled: true, isRegex: false },
+            { value: "FAX番号", enabled: true, isRegex: false },
+            { value: "メールアドレス", enabled: true, isRegex: false },
+        ];
     }
 
     rules.forEach(rule => {
@@ -204,11 +239,11 @@ function loadRules() {
         tr.innerHTML = `
             <td><input type="checkbox" class="mask-enable" ${rule.enabled ? "checked" : ""}></td>
             <td><input type="text" class="mask-word" value="${rule.value}"></td>
+            <td><input type="checkbox" class="mask-regex" ${rule.isRegex ? "checked" : ""}></td>
         `;
         tbody.appendChild(tr);
     });
 }
-
 
 /* =====================================================
    補助関数
