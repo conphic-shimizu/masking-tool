@@ -20,36 +20,33 @@
         table {
             border-collapse: collapse;
             width: 100%;
-            margin-bottom: 10px;
-        }
-
-        table,
-        th,
-        td {
-            border: 1px solid #aaa;
         }
 
         th,
         td {
+            border: 1px solid #ccc;
             padding: 6px;
-            text-align: left;
         }
 
         button {
-            padding: 6px 12px;
-            margin-top: 4px;
+            padding: 10px 20px;
+            font-size: 16px;
             cursor: pointer;
+            margin-top: 8px;
         }
 
         .delete-btn {
-            color: red;
-            font-weight: bold;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 4px 8px;
         }
     </style>
 </head>
 
 <body>
-    <h1>Word マスキングツール</h1>
+    <h1>Wordマスキングツール</h1>
 
     <section>
         <label for="fileInput">Wordファイル（.docx）</label><br>
@@ -67,15 +64,14 @@
                 </tr>
             </thead>
             <tbody>
-                <!-- ルールはJSでロード -->
+                <!-- JSで初期化 -->
             </tbody>
         </table>
-        <button id="addRowBtn">＋ 行を追加</button>
+        <button id="addRowBtn" type="button">＋ 行を追加</button>
     </section>
 
     <button id="runBtn">マスキング実行</button>
 
-    <!-- ライブラリ -->
     <script src="lib/jszip.min.js"></script>
     <script src="main.js"></script>
 </body>
