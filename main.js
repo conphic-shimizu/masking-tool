@@ -5,13 +5,13 @@ const MASK_CHAR = "■";
    初期ルール（デフォルト）
 ========================= */
 const DEFAULT_MASK_RULES = [
-    { value: "コンフィック", enabled: true, isRegex: false },
-    { value: "190-0022", enabled: true, isRegex: false },
-    { value: "東京都立川市錦町1-4-4立川サニーハイツ303", enabled: true, isRegex: false },
-    { value: "042-595-7557", enabled: true, isRegex: false },
-    { value: "042-595-7558", enabled: true, isRegex: false },
-    { value: "@conphic.co.jp", enabled: true, isRegex: false },
+    { value: "コンフィック", enabled: true },
+    { value: "\\d{3}-\\d{4}", enabled: true },                 // 郵便番号
+    { value: "東京都立川市錦町1-4-4立川サニーハイツ303", enabled: true },
+    { value: "\\d{2,4}-\\d{2,4}-\\d{4}", enabled: true },     // 電話番号
+    { value: "[a-zA-Z0-9._%+-]+@conphic\\.co\\.jp", enabled: true }, // メール
 ];
+
 
 /* =========================
    初期化
@@ -97,20 +97,8 @@ function maskWordXml(xml, rules) {
 
     // マスク適用
     rules.forEach(rule => {
-        if (!rule || !rule.value) return;
-
-        if (rule.isRegex) {
-            try {
-                const re = new RegExp(rule.value, "g");
-                masked = masked.replace(re, m => MASK_CHAR.repeat(m.length));
-            } catch (e) {
-                console.warn("無効な正規表現:", rule.value);
-            }
-        } else {
-            const escaped = rule.value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-            const re = new RegExp(escaped, "g");
-            masked = masked.replace(re, m => MASK_CHAR.repeat(m.length));
-        }
+        const re = new RegExp(rule.value, "g");
+        masked = masked.replace(re, m => "■".repeat(m.length));
     });
 
     // 再分配
