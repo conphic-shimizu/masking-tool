@@ -1,9 +1,34 @@
+/* =====================================================
+   定数
+===================================================== */
 const STORAGE_KEY = "word-mask-rules";
+const MASK_CHAR = "■";
 
-/* =========================
-   行追加
-========================= */
-document.getElementById("addRowBtn").addEventListener("click", () => {
+/* =====================================================
+   初期化
+===================================================== */
+document.addEventListener("DOMContentLoaded", () => {
+    bindEvents();
+    loadRules();
+});
+
+/* =====================================================
+   イベント登録
+===================================================== */
+function bindEvents() {
+    document.getElementById("addRowBtn").addEventListener("click", addRuleRow);
+    document.getElementById("previewBtn").addEventListener("click", previewMask);
+    document.getElementById("runBtn").addEventListener("click", runMasking);
+
+    const tbody = document.querySelector("#maskTable tbody");
+    tbody.addEventListener("input", saveRules);
+    tbody.addEventListener("change", saveRules);
+}
+
+/* =====================================================
+   ルール行操作
+===================================================== */
+function addRuleRow() {
     const tbody = document.querySelector("#maskTable tbody");
     const tr = document.createElement("tr");
 
@@ -13,20 +38,16 @@ document.getElementById("addRowBtn").addEventListener("click", () => {
     `;
 
     tbody.appendChild(tr);
+    tr.querySelector(".mask-word").focus();
     saveRules();
-});
+}
 
-/* =========================
-   プレビュー
-========================= */
-document.getElementById("previewBtn").addEventListener("click", async () => {
-    const fileInput = document.getElementById("fileInput");
-    const file = fileInput.files[0];
-
-    if (!file) {
-        alert("Wordファイルを選択してください");
-        return;
-    }
+/* =====================================================
+   プレビュー処理
+===================================================== */
+async function previewMask() {
+    const file = getSelectedFile();
+    if (!file) return;
 
     const rules = getEnabledRules();
     if (rules.length === 0) {
@@ -34,16 +55,8 @@ document.getElementById("previewBtn").addEventListener("click", async () => {
         return;
     }
 
-    const arrayBuffer = await file.arrayBuffer();
-    const zip = await JSZip.loadAsync(arrayBuffer);
-
-    const docXmlFile = zip.file("word/document.xml");
-    if (!docXmlFile) {
-        alert("document.xml が見つかりません");
-        return;
-    }
-
-    const xml = await docXmlFile.async("string");
+    const xml = await loadDocumentXml(file);
+    if (!xml) return;
 
     const { joined, masked } = buildPreview(xml, rules);
 
@@ -57,19 +70,14 @@ document.getElementById("previewBtn").addEventListener("click", async () => {
         masked;
 
     area.style.display = "block";
-});
+}
 
-/* =========================
+/* =====================================================
    マスキング実行
-========================= */
-document.getElementById("runBtn").addEventListener("click", async () => {
-    const fileInput = document.getElementById("fileInput");
-    const file = fileInput.files[0];
-
-    if (!file) {
-        alert("Wordファイルを選択してください");
-        return;
-    }
+===================================================== */
+async function runMasking() {
+    const file = getSelectedFile();
+    if (!file) return;
 
     const rules = getEnabledRules();
     if (rules.length === 0) {
@@ -87,20 +95,19 @@ document.getElementById("runBtn").addEventListener("click", async () => {
     }
 
     let xml = await docXmlFile.async("string");
-
     xml = maskWordXml(xml, rules);
 
     zip.file("word/document.xml", xml);
 
     const blob = await zip.generateAsync({ type: "blob" });
     download(blob, file.name.replace(".docx", "_masked.docx"));
-});
+}
 
-/* =========================
+/* =====================================================
    Word XML マスキング本体
-========================= */
+===================================================== */
 function maskWordXml(xml, words) {
-    // <w:t>...</w:t> を全部拾う
+    // <w:t> ノードを全取得
     const textNodes = [];
     const regex = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
 
@@ -114,86 +121,89 @@ function maskWordXml(xml, words) {
         });
     }
 
-    // 連結テキスト
+    // 連結 → マスク
     const joined = textNodes.map(n => n.text).join("");
-    let masked = joined;
+    let masked = applyMask(joined, words);
 
-    const maskChar = "■";
-
-    words.forEach(word => {
-        const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const re = new RegExp(escaped, "g");
-        masked = masked.replace(re, m => maskChar.repeat(m.length));
-    });
-
-    // 再分配
+    // 元の分割単位に再分配
     let cursor = 0;
-    const replacedNodes = textNodes.map(n => {
-        const len = n.text.length;
-        const part = masked.slice(cursor, cursor + len);
-        cursor += len;
+    const replacedTexts = textNodes.map(n => {
+        const part = masked.slice(cursor, cursor + n.text.length);
+        cursor += n.text.length;
         return part;
     });
 
-    // XML 書き戻し
+    // XMLへ書き戻し（offset考慮）
     let offset = 0;
     textNodes.forEach((node, i) => {
-        const before = xml.slice(0, node.start + offset);
-        const after = xml.slice(node.end + offset);
-
         const replaced = node.full.replace(
             node.text,
-            escapeXml(replacedNodes[i])
+            escapeXml(replacedTexts[i])
         );
 
-        xml = before + replaced + after;
+        xml =
+            xml.slice(0, node.start + offset) +
+            replaced +
+            xml.slice(node.end + offset);
+
         offset += replaced.length - node.full.length;
     });
 
     return xml;
 }
 
-/* =========================
-   補助関数
-========================= */
+/* =====================================================
+   プレビュー用（XMLを書き換えない）
+===================================================== */
+function buildPreview(xml, words) {
+    const regex = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
+    const texts = [];
+
+    let match;
+    while ((match = regex.exec(xml)) !== null) {
+        texts.push(match[1]);
+    }
+
+    const joined = texts.join("");
+    const masked = applyMask(joined, words);
+
+    return { joined, masked };
+}
+
+/* =====================================================
+   マスキング共通処理
+===================================================== */
+function applyMask(text, words) {
+    let result = text;
+
+    words.forEach(word => {
+        const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const re = new RegExp(escaped, "g");
+        result = result.replace(re, m => MASK_CHAR.repeat(m.length));
+    });
+
+    return result;
+}
+
+/* =====================================================
+   ルール取得
+===================================================== */
 function getEnabledRules() {
-    return Array.from(
-        document.querySelectorAll("#maskTable tbody tr")
-    )
+    return Array.from(document.querySelectorAll("#maskTable tbody tr"))
         .map(tr => {
             const enable = tr.querySelector(".mask-enable");
             const word = tr.querySelector(".mask-word");
             if (!enable || !word) return null;
-            return { enable, word };
+            return enable.checked ? word.value.trim() : null;
         })
-        .filter(v => v && v.enable.checked)
-        .map(v => v.word.value.trim())
         .filter(Boolean);
 }
 
-
-function escapeXml(str) {
-    return str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-}
-
-function download(blob, filename) {
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(a.href);
-}
-
-/* =========================
+/* =====================================================
    localStorage
-========================= */
+===================================================== */
 function saveRules() {
-    const rules = Array.from(
-        document.querySelectorAll("#maskTable tbody tr")
-    )
+    const rules = Array.from(document.querySelectorAll("#maskTable tbody tr"))
         .map(tr => {
             const enable = tr.querySelector(".mask-enable");
             const word = tr.querySelector(".mask-word");
@@ -219,47 +229,49 @@ function loadRules() {
     rules.forEach(rule => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-            <td>
-                <input type="checkbox" class="mask-enable" ${rule.enabled ? "checked" : ""}>
-            </td>
-            <td>
-                <input type="text" class="mask-word" value="${rule.value}">
-            </td>
+            <td><input type="checkbox" class="mask-enable" ${rule.enabled ? "checked" : ""}></td>
+            <td><input type="text" class="mask-word" value="${rule.value}"></td>
         `;
         tbody.appendChild(tr);
     });
 }
 
-function buildPreview(xml, words) {
-    const regex = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
-    const textNodes = [];
-
-    let match;
-    while ((match = regex.exec(xml)) !== null) {
-        textNodes.push(match[1]);
+/* =====================================================
+   補助関数
+===================================================== */
+function getSelectedFile() {
+    const file = document.getElementById("fileInput").files[0];
+    if (!file) {
+        alert("Wordファイルを選択してください");
+        return null;
     }
-
-    const joined = textNodes.join("");
-    let masked = joined;
-
-    const maskChar = "■";
-
-    words.forEach(word => {
-        const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const re = new RegExp(escaped, "g");
-        masked = masked.replace(re, m => maskChar.repeat(m.length));
-    });
-
-    return { joined, masked };
+    return file;
 }
 
-document
-    .querySelector("#maskTable tbody")
-    .addEventListener("input", saveRules);
+function loadDocumentXml(file) {
+    return file.arrayBuffer()
+        .then(buf => JSZip.loadAsync(buf))
+        .then(zip => {
+            const doc = zip.file("word/document.xml");
+            if (!doc) {
+                alert("document.xml が見つかりません");
+                return null;
+            }
+            return doc.async("string");
+        });
+}
 
-document
-    .querySelector("#maskTable tbody")
-    .addEventListener("change", saveRules);
+function escapeXml(str) {
+    return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+}
 
-document.addEventListener("DOMContentLoaded", loadRules);
-
+function download(blob, filename) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+}
