@@ -9,7 +9,7 @@ const MASK_CHAR = "■";
    - 通常文字列 or 正規表現対応
 ============================== */
 const DEFAULT_MASK_RULES = [
-    { value: "コンフィック", enabled: true, isRegex: false },
+    { value: "株式会社コンフィック", enabled: true, isRegex: false },
     { value: "\\d{3}-\\d{4}", enabled: true, isRegex: true }, // 郵便番号
     { value: "042-595-7557", enabled: true, isRegex: false },
     { value: "042-595-7558", enabled: true, isRegex: false },
