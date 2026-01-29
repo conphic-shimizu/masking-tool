@@ -2,14 +2,15 @@ const STORAGE_KEY = "word-mask-rules";
 const MASK_CHAR = "■";
 
 /* =========================
-   初期ルール（デフォルト）※全て正規表現として扱う
+   初期ルール（デフォルト）
 ========================= */
 const DEFAULT_MASK_RULES = [
-    { value: "(株式会社)?コンフィック", enabled: true },
-    { value: "\\d{3}[--]\\d{4}", enabled: true },                 // 郵便番号
-    { value: "[0-9０-９]{2,4}[0-9０-９]{2,4}[0-9０-９]{4}", enabled: true },
-    { value: "[a-zA-Z0-9._%+-]+@conphic\\.co\\.jp", enabled: true }, // メール
+    { value: "コンフィック", enabled: true },
+    { value: "\\d{3}-\\d{4}", enabled: true },
+    { value: "\\d{2,4}-\\d{2,4}-\\d{4}", enabled: true },
+    { value: "[a-zA-Z0-9._%+-]+@conphic\\.co\\.jp", enabled: true },
 ];
+
 
 /* =========================
    初期化
