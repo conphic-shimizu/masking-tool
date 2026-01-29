@@ -21,25 +21,7 @@
             font-weight: bold;
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 12px;
-        }
-
-        table,
-        th,
-        td {
-            border: 1px solid #ccc;
-        }
-
-        th,
-        td {
-            padding: 6px;
-            text-align: left;
-        }
-
-        input[type="text"] {
+        textarea {
             width: 100%;
             box-sizing: border-box;
         }
@@ -48,13 +30,22 @@
             padding: 10px 20px;
             font-size: 16px;
             cursor: pointer;
-            margin-right: 8px;
         }
 
-        footer {
-            margin-top: 40px;
-            font-size: 12px;
-            color: #666;
+        section {
+            margin-bottom: 24px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 6px;
+            text-align: left;
         }
     </style>
 </head>
@@ -77,18 +68,18 @@
                     <th>正規表現</th>
                 </tr>
             </thead>
-            <tbody></tbody>
+            <tbody>
+                <!-- ルールはJSで追加 -->
+            </tbody>
         </table>
         <button id="addRowBtn" type="button">＋ 行を追加</button>
     </section>
 
     <button id="runBtn">マスキング実行</button>
 
-    <footer>Version 1.0.0</footer>
+    <footer style="margin-top:20px;">バージョン: 1.0</footer>
 
-    <!-- ライブラリ -->
     <script src="lib/jszip.min.js"></script>
-    <!-- メイン処理 -->
     <script src="main.js"></script>
 </body>
 
