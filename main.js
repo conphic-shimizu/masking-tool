@@ -5,8 +5,8 @@ const MASK_CHAR = "■";
    初期ルール（デフォルト）※全て正規表現として扱う
 ========================= */
 const DEFAULT_MASK_RULES = [
-    { value: "コンフィック", enabled: true },
-    { value: "\\d{3}-\\d{4}", enabled: true },                 // 郵便番号
+    { value: "(株式会社)?コンフィック", enabled: true }
+    { value: "\\d{3}[--]\\d{4}", enabled: true },                 // 郵便番号
     { value: "\\d{2,4}[-‐-–−ー]\\d{2,4}[-‐-–−ー]\\d{4}", enabled: true }
     { value: "[a-zA-Z0-9._%+-]+@conphic\\.co\\.jp", enabled: true }, // メール
 ];
