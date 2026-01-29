@@ -38,19 +38,21 @@ function bindEvents() {
 /* =====================================================
    ルール行操作
 ===================================================== */
-function addRuleRow() {
+function addRuleRow(rule = null) {
     const tbody = document.querySelector("#maskTable tbody");
     const tr = document.createElement("tr");
+
     tr.innerHTML = `
-        <td><input type="checkbox" class="mask-enable" checked></td>
-        <td><input type="text" class="mask-word"></td>
-        <td><button type="button" class="delete-row">削除</button></td>
+        <td><input type="checkbox" class="mask-enable" ${rule && rule.enabled ? "checked" : "checked"}></td>
+        <td><input type="text" class="mask-word" value="${rule ? rule.value : ""}"></td>
+        <td><button type="button" class="delete-row-btn">削除</button></td>
     `;
+
     tbody.appendChild(tr);
     tr.querySelector(".mask-word").focus();
 
-    // 削除ボタン
-    tr.querySelector(".delete-row").addEventListener("click", () => {
+    // 削除ボタンイベント
+    tr.querySelector(".delete-row-btn").addEventListener("click", () => {
         tr.remove();
         saveRules();
     });
@@ -62,8 +64,12 @@ function addRuleRow() {
    マスキング実行
 ===================================================== */
 async function runMasking() {
-    const file = getSelectedFile();
-    if (!file) return;
+    const fileInput = document.getElementById("fileInput");
+    const file = fileInput.files[0];
+    if (!file) {
+        alert("Wordファイルを選択してください");
+        return;
+    }
 
     const rules = getEnabledRules();
     if (rules.length === 0) {
@@ -71,6 +77,7 @@ async function runMasking() {
         return;
     }
 
+    // ファイル読み込み
     const arrayBuffer = await file.arrayBuffer();
     const zip = await JSZip.loadAsync(arrayBuffer);
 
@@ -85,19 +92,23 @@ async function runMasking() {
 
     zip.file("word/document.xml", xml);
 
-    const blob = await zip.generateAsync({ type: "blob" });
+    // 安全生成: ArrayBuffer → Blob
+    const maskedArrayBuffer = await zip.generateAsync({ type: "arraybuffer" });
+    const blob = new Blob([maskedArrayBuffer], {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    });
+
     download(blob, file.name.replace(".docx", "_masked.docx"));
 }
 
 /* =====================================================
-   Word XML マスキング本体（<w:t> 構造保持）
+   Word XML マスキング本体
 ===================================================== */
 function maskWordXml(xml, words) {
     const textNodes = [];
     const regex = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
-    let match;
 
-    // <w:t> を収集
+    let match;
     while ((match = regex.exec(xml)) !== null) {
         textNodes.push({
             full: match[0],
@@ -107,18 +118,10 @@ function maskWordXml(xml, words) {
         });
     }
 
-    // 連結してマスク
-    let joined = textNodes.map(n => n.text).join("");
-    let masked = joined;
+    const joined = textNodes.map(n => n.text).join("");
+    let masked = applyMask(joined, words);
 
-    words.forEach(word => {
-        if (!word || typeof word !== "string") return;
-        const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const re = new RegExp(escaped, "g");
-        masked = masked.replace(re, MASK_CHAR.repeat(word.length));
-    });
-
-    // 元の <w:t> の長さに分割して再配分
+    // 元の分割単位に再分配
     let cursor = 0;
     const replacedTexts = textNodes.map(n => {
         const part = masked.slice(cursor, cursor + n.text.length);
@@ -126,7 +129,7 @@ function maskWordXml(xml, words) {
         return part;
     });
 
-    // XMLに書き戻し
+    // XML 書き戻し
     let offset = 0;
     textNodes.forEach((node, i) => {
         const replaced = node.full.replace(node.text, escapeXml(replacedTexts[i]));
@@ -135,6 +138,20 @@ function maskWordXml(xml, words) {
     });
 
     return xml;
+}
+
+/* =====================================================
+   マスキング共通処理
+===================================================== */
+function applyMask(text, words) {
+    let result = text;
+    words.forEach(word => {
+        if (!word) return;
+        const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const re = new RegExp(escaped, "g");
+        result = result.replace(re, MASK_CHAR.repeat(word.length));
+    });
+    return result;
 }
 
 /* =====================================================
@@ -149,6 +166,35 @@ function getEnabledRules() {
             return enable.checked ? word.value.trim() : null;
         })
         .filter(Boolean);
+}
+
+function saveRules() {
+    const rules = Array.from(document.querySelectorAll("#maskTable tbody tr"))
+        .map(tr => {
+            const enable = tr.querySelector(".mask-enable");
+            const word = tr.querySelector(".mask-word");
+            if (!enable || !word) return null;
+            return { enabled: enable.checked, value: word.value };
+        })
+        .filter(Boolean);
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(rules));
+}
+
+function loadRules() {
+    const tbody = document.querySelector("#maskTable tbody");
+    tbody.innerHTML = "";
+
+    const saved = localStorage.getItem(STORAGE_KEY);
+    let rules;
+
+    if (saved) {
+        rules = JSON.parse(saved);
+    } else {
+        rules = DEFAULT_MASK_RULES;
+    }
+
+    rules.forEach(rule => addRuleRow(rule));
 }
 
 function getSelectedFile() {
@@ -173,54 +219,4 @@ function download(blob, filename) {
     a.download = filename;
     a.click();
     URL.revokeObjectURL(a.href);
-}
-
-/* =====================================================
-   localStorage
-===================================================== */
-function saveRules() {
-    const rules = Array.from(document.querySelectorAll("#maskTable tbody tr"))
-        .map(tr => {
-            const enable = tr.querySelector(".mask-enable");
-            const word = tr.querySelector(".mask-word");
-            if (!enable || !word) return null;
-            return {
-                enabled: enable.checked,
-                value: word.value
-            };
-        })
-        .filter(Boolean);
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(rules));
-}
-
-/* =====================================================
-   ルール読み込み（デフォルトと保存済み両方表示）
-===================================================== */
-function loadRules() {
-    const tbody = document.querySelector("#maskTable tbody");
-    tbody.innerHTML = "";
-
-    let saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-
-    // DEFAULT_MASK_RULES + 保存済みルールを重複なく表示
-    const merged = [...DEFAULT_MASK_RULES];
-    saved.forEach(s => {
-        if (!merged.some(d => d.value === s.value)) merged.push(s);
-    });
-
-    merged.forEach(rule => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td><input type="checkbox" class="mask-enable" ${rule.enabled ? "checked" : ""}></td>
-            <td><input type="text" class="mask-word" value="${rule.value}"></td>
-            <td><button type="button" class="delete-row">削除</button></td>
-        `;
-        tbody.appendChild(tr);
-
-        tr.querySelector(".delete-row").addEventListener("click", () => {
-            tr.remove();
-            saveRules();
-        });
-    });
 }
