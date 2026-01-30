@@ -44,9 +44,10 @@ function toggleTheme() {
 function bindEvents() {
     document.getElementById("themeToggle")?.addEventListener("click", toggleTheme);
 
+    // 「同じファイルを選び直す」と change が発火しないことがあるので、事前に value を空にする
     document.getElementById("filePickBtn")?.addEventListener("click", () => {
         const input = document.getElementById("fileInput");
-        if (input) input.value = ""; // 同じファイルでもchangeを出す
+        if (input) input.value = "";
     });
 
     document.getElementById("fileInput")?.addEventListener("change", syncSelectedFileName);
@@ -68,9 +69,11 @@ function bindEvents() {
     const tbody = document.querySelector("#maskTable tbody");
     if (!tbody) return;
 
+    // 入力/チェック変更で保存
     tbody.addEventListener("input", saveRules);
     tbody.addEventListener("change", saveRules);
 
+    // 削除
     tbody.addEventListener("click", (e) => {
         const btn = e.target?.closest?.("button[data-action='delete']");
         if (!btn) return;
@@ -79,6 +82,7 @@ function bindEvents() {
         saveRules();
     });
 
+    // DnD 並べ替え
     setupDragSort(tbody);
 }
 
@@ -92,7 +96,7 @@ function syncSelectedFileName() {
 }
 
 // =========================
-// Drag & Drop sorting
+// Drag & Drop sorting (HTML5 DnD)
 // =========================
 function setupDragSort(tbody) {
     let draggingRow = null;
@@ -111,7 +115,7 @@ function setupDragSort(tbody) {
         tr.classList.add("is-dragging");
 
         e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData("text/plain", "move");
+        e.dataTransfer.setData("text/plain", "move"); // Firefox対策
     });
 
     tbody.addEventListener("dragover", (e) => {
@@ -124,7 +128,7 @@ function setupDragSort(tbody) {
         clearDragOverClasses(tbody);
 
         const rect = target.getBoundingClientRect();
-        const isAfter = e.clientY - rect.top > rect.height / 2;
+        const isAfter = (e.clientY - rect.top) > (rect.height / 2);
 
         target.classList.add(isAfter ? "drag-over-bottom" : "drag-over-top");
         tbody.insertBefore(draggingRow, isAfter ? target.nextSibling : target);
@@ -140,13 +144,12 @@ function setupDragSort(tbody) {
         draggingRow.classList.remove("is-dragging");
         draggingRow = null;
         clearDragOverClasses(tbody);
-        saveRules();
+        saveRules(); // 並び順を保存
     });
 
     function clearDragOverClasses(tbodyEl) {
-        tbodyEl
-            .querySelectorAll("tr.drag-over-top, tr.drag-over-bottom")
-            .forEach((tr) => tr.classList.remove("drag-over-top", "drag-over-bottom"));
+        tbodyEl.querySelectorAll("tr.drag-over-top, tr.drag-over-bottom")
+            .forEach(tr => tr.classList.remove("drag-over-top", "drag-over-bottom"));
     }
 }
 
@@ -163,16 +166,15 @@ function loadRules() {
     const parsed = savedRaw ? safeJsonParse(savedRaw, []) : [];
     const saved = Array.isArray(parsed) ? parsed : [];
 
+    // DEFAULT + saved をマージ（saved優先、重複はvalueキーで上書き）
     const map = new Map();
-    DEFAULT_MASK_RULES.forEach((r) => map.set(r.value, { value: r.value, enabled: !!r.enabled }));
-
-    saved.forEach((r) => {
+    DEFAULT_MASK_RULES.forEach(r => map.set(r.value, { value: r.value, enabled: !!r.enabled }));
+    saved.forEach(r => {
         if (!r || typeof r.value !== "string") return;
         map.set(r.value, { value: r.value, enabled: !!r.enabled });
     });
 
-    const merged = Array.from(map.values());
-    merged.forEach((rule) => addRuleRow(rule));
+    Array.from(map.values()).forEach(rule => addRuleRow(rule));
 }
 
 function addRuleRow(rule) {
@@ -204,14 +206,13 @@ function getEnabledRules() {
     if (!tbody) return [];
 
     return Array.from(tbody.querySelectorAll("tr"))
-        .map((tr) => {
+        .map(tr => {
             const enable = tr.querySelector(".mask-enable");
             const word = tr.querySelector(".mask-word");
             if (!enable || !word) return null;
             if (!enable.checked) return null;
             const v = (word.value ?? "").trim();
-            if (!v) return null;
-            return v;
+            return v ? v : null;
         })
         .filter(Boolean);
 }
@@ -221,7 +222,7 @@ function saveRules() {
     if (!tbody) return;
 
     const rules = Array.from(tbody.querySelectorAll("tr"))
-        .map((tr) => {
+        .map(tr => {
             const enable = tr.querySelector(".mask-enable");
             const word = tr.querySelector(".mask-word");
             if (!enable || !word) return null;
@@ -233,11 +234,7 @@ function saveRules() {
 }
 
 function safeJsonParse(text, fallback) {
-    try {
-        return JSON.parse(text);
-    } catch {
-        return fallback;
-    }
+    try { return JSON.parse(text); } catch { return fallback; }
 }
 
 function escapeHtmlAttr(s) {
@@ -254,6 +251,7 @@ function escapeHtmlAttr(s) {
 async function runMasking() {
     const fileInput = document.getElementById("fileInput");
     const file = fileInput?.files?.[0];
+
     if (!file) {
         alert("ファイル（.docx / .pptx / .xlsx）を選択してください");
         return;
@@ -266,7 +264,7 @@ async function runMasking() {
     }
 
     const ext = getLowerExt(file.name);
-    if (ext !== "docx" && ext !== "pptx" && ext !== "xlsx") {
+    if (!["docx", "pptx", "xlsx"].includes(ext)) {
         alert("対応形式は .docx / .pptx / .xlsx です");
         return;
     }
@@ -320,6 +318,7 @@ async function maskDocx(zip, literalWords) {
     zip.file("word/document.xml", xml);
 }
 
+// Word: <w:t> 連結→マスク→再分配（固定文字列）
 function maskWordXmlByLiterals(xml, literalWords) {
     const wtRegex = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
     const nodes = [];
@@ -337,11 +336,11 @@ function maskWordXmlByLiterals(xml, literalWords) {
 
     if (nodes.length === 0) return xml;
 
-    const joined = nodes.map((n) => n.text).join("");
+    const joined = nodes.map(n => n.text).join("");
     let masked = joined;
 
     const words = literalWords
-        .map((w) => (w ?? "").trim())
+        .map(w => (w ?? "").trim())
         .filter(Boolean)
         .sort((a, b) => b.length - a.length);
 
@@ -349,13 +348,15 @@ function maskWordXmlByLiterals(xml, literalWords) {
         masked = replaceAllLiteralKeepingLength(masked, word, MASK_CHAR);
     }
 
+    // 再分配
     let cursor = 0;
-    const parts = nodes.map((n) => {
+    const parts = nodes.map(n => {
         const part = masked.slice(cursor, cursor + n.len);
         cursor += n.len;
         return part;
     });
 
+    // XMLへ書き戻し
     let offset = 0;
     nodes.forEach((node, i) => {
         const before = xml.slice(0, node.start + offset);
@@ -363,13 +364,13 @@ function maskWordXmlByLiterals(xml, literalWords) {
 
         const replaced = replaceWtInner(node.full, parts[i]);
         xml = before + replaced + after;
-
         offset += replaced.length - node.full.length;
     });
 
     return xml;
 }
 
+// <w:t> の内側だけ安全に差し替える
 function replaceWtInner(fullWt, newInner) {
     return fullWt.replace(
         /(<w:t[^>]*>)([\s\S]*?)(<\/w:t>)/,
@@ -415,53 +416,111 @@ function getPptxSlidePaths(zip) {
     return paths;
 }
 
+/**
+ * PPTX:
+ * - これまで：<a:p>単位で処理（段落をまたぐ一致は不可）
+ * - 改善後：同一 <p:txBody>（同一テキストボックス）単位で、
+ *   <a:p> / <a:br> / <a:tab> / テキスト中の \r\n を “マッチング上は無視” して連結→マスク→再分配
+ */
 function maskPptxSlideXmlByLiterals(xmlText, literalWords, debugName = "") {
     const doc = parseXml(xmlText, debugName);
 
-    const paragraphs = getElementsByLocalName(doc, "p");
-    if (paragraphs.length === 0) return { xml: xmlText, changed: false };
-
     const words = literalWords
-        .map((w) => (w ?? "").trim())
+        .map(w => (w ?? "").trim())
         .filter(Boolean)
         .sort((a, b) => b.length - a.length);
 
+    // テキストボックス単位（txBody）で処理
+    const txBodies = getElementsByLocalName(doc, "txBody");
+    if (txBodies.length === 0) return { xml: xmlText, changed: false };
+
     let changed = false;
 
-    for (const p of paragraphs) {
-        const ts = [];
-
-        const walker = doc.createTreeWalker(
-            p,
-            NodeFilter.SHOW_ELEMENT,
-            {
-                acceptNode(node) {
-                    return node.localName === "t" ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
-                },
-            }
-        );
-
-        while (walker.nextNode()) ts.push(walker.currentNode);
-        if (ts.length === 0) continue;
-
-        const texts = ts.map((n) => n.textContent ?? "");
-        const lens = texts.map((s) => s.length);
-        const joined = texts.join("");
-        if (!joined) continue;
-
-        let masked = joined;
-        const beforeAll = masked;
-
-        for (const word of words) {
-            masked = replaceAllLiteralKeepingLength(masked, word, MASK_CHAR);
+    for (const txBody of txBodies) {
+        // txBody配下の段落 <a:p> を順番に集める
+        const paragraphs = [];
+        for (let i = 0; i < txBody.childNodes.length; i++) {
+            const n = txBody.childNodes[i];
+            if (n.nodeType === 1 && n.localName === "p") paragraphs.push(n);
         }
-        if (masked === beforeAll) continue;
+        if (paragraphs.length === 0) continue;
 
-        let cursor = 0;
-        for (let i = 0; i < ts.length; i++) {
-            const part = masked.slice(cursor, cursor + lens[i]);
-            cursor += lens[i];
-            ts[i].textContent = part;
+        // ① txBody内を表示順に見て、<a:t>（文字）と区切り（段落/改行/タブ）を扱う
+        //    マッチング用の flat（区切り無視）と、flatの各文字→元ノード位置対応表を作る
+        let flat = "";
+        const indexMap = []; // indexMap[i] = { node: <a:t>, offset: number }
+
+        // txBody全体の <a:t> を順に辿る。ただし段落境界も保持したいので段落ごとに回す
+        for (const p of paragraphs) {
+            // 段落内を走査して <a:t>, <a:br>, <a:tab> を拾う
+            const walker = doc.createTreeWalker(
+                p,
+                NodeFilter.SHOW_ELEMENT,
+                {
+                    acceptNode(node) {
+                        if (node.localName === "t" || node.localName === "br" || node.localName === "tab") {
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                        return NodeFilter.FILTER_SKIP;
+                    }
+                }
+            );
+
+            while (walker.nextNode()) {
+                const node = walker.currentNode;
+
+                if (node.localName === "t") {
+                    const text = node.textContent ?? "";
+                    // text中の \r \n も “区切り扱い” としてマッチングから除外する（重要）
+                    for (let j = 0; j < text.length; j++) {
+                        const ch = text[j];
+                        if (ch === "\n" || ch === "\r") {
+                            // ここは区切り扱い：flatに入れない・indexMapも作らない
+                            continue;
+                        }
+                        flat += ch;
+                        indexMap.push({ node, offset: j });
+                    }
+                } else {
+                    // <a:br/> / <a:tab/> は区切り扱い：flatに入れない
+                    continue;
+                }
+            }
+
+            // ★段落境界も “区切り扱い” として無視（flatに入れない）
+            // 何もしない＝無視
+        }
+
+        if (!flat) continue;
+
+        // ② flat上で固定文字列をマスク
+        let maskedFlat = flat;
+        const beforeAll = maskedFlat;
+
+        for (const w of words) {
+            maskedFlat = replaceAllLiteralKeepingLength(maskedFlat, w, MASK_CHAR);
+        }
+        if (maskedFlat === beforeAll) continue;
+
+        // ③ 元の <a:t> を文字配列として用意し、indexMapに従って差し替える
+        //    ※改行(\n\r)や区切りはindexMapに含めていないので保持される
+        const touched = new Map(); // node -> charArray
+        for (const m of indexMap) {
+            if (!touched.has(m.node)) {
+                touched.set(m.node, (m.node.textContent ?? "").split(""));
+            }
+        }
+
+        for (let i = 0; i < maskedFlat.length; i++) {
+            const m = indexMap[i];
+            if (!m) continue;
+            const arr = touched.get(m.node);
+            if (!arr) continue;
+            arr[m.offset] = maskedFlat[i];
+        }
+
+        for (const [node, arr] of touched.entries()) {
+            node.textContent = arr.join("");
         }
 
         changed = true;
@@ -472,16 +531,15 @@ function maskPptxSlideXmlByLiterals(xmlText, literalWords, debugName = "") {
 }
 
 // =========================
-// XLSX (sharedStrings + inlineStr) - 色は触らない版
+// XLSX (sharedStrings + inlineStr)
 // =========================
 async function maskXlsx(zip, literalWords) {
     const words = literalWords
-        .map((w) => (w ?? "").trim())
+        .map(w => (w ?? "").trim())
         .filter(Boolean)
         .sort((a, b) => b.length - a.length);
 
     let sharedStringsFound = false;
-    let sharedStringsSi = 0;
     let inlineCells = 0;
 
     // --- 1) xl/sharedStrings.xml ---
@@ -492,82 +550,68 @@ async function maskXlsx(zip, literalWords) {
         const xmlText = await sstFile.async("string");
         const doc = parseXml(xmlText, sstPath);
 
-        // <si> 単位：配下の <t> を全部集めて連結→マスク→再分配
         const siNodes = getElementsByLocalName(doc, "si");
         for (const si of siNodes) {
             const tNodes = collectDescendantTNodes(doc, si);
             if (tNodes.length === 0) continue;
-
-            const changed = maskAndRedistributeTextNodes(tNodes, words, true);
-            if (changed) sharedStringsSi++;
+            maskAndRedistributeTextNodes(tNodes, words);
         }
 
         zip.file(sstPath, new XMLSerializer().serializeToString(doc));
     }
 
     // --- 2) xl/worksheets/*.xml : inlineStr ---
-    const worksheetPaths = [];
+    const sheetPaths = [];
     zip.forEach((relativePath, file) => {
-        if (!file.dir && relativePath.startsWith("xl/worksheets/") && relativePath.endsWith(".xml")) {
-            worksheetPaths.push(relativePath);
-        }
+        if (!file.dir && /^xl\/worksheets\/sheet\d+\.xml$/.test(relativePath)) sheetPaths.push(relativePath);
     });
 
-    worksheetPaths.sort((a, b) => {
-        const na = parseInt(a.match(/sheet(\d+)\.xml$/)?.[1] ?? "999999", 10);
-        const nb = parseInt(b.match(/sheet(\d+)\.xml$/)?.[1] ?? "999999", 10);
-        if (na !== nb) return na - nb;
-        return a.localeCompare(b);
+    sheetPaths.sort((a, b) => {
+        const na = parseInt(a.match(/sheet(\d+)\.xml$/)?.[1] ?? "0", 10);
+        const nb = parseInt(b.match(/sheet(\d+)\.xml$/)?.[1] ?? "0", 10);
+        return na - nb;
     });
 
-    for (const path of worksheetPaths) {
+    for (const path of sheetPaths) {
         const f = zip.file(path);
         if (!f) continue;
 
         const xmlText = await f.async("string");
         const doc = parseXml(xmlText, path);
 
-        const cNodes = getElementsByLocalName(doc, "c");
-        let changedAny = false;
+        // c[@t="inlineStr"] の <is> 配下の <t> を対象
+        const cellNodes = getElementsByLocalName(doc, "c");
+        let changed = false;
 
-        for (const c of cNodes) {
-            if (c.getAttribute("t") !== "inlineStr") continue;
+        for (const c of cellNodes) {
+            const tAttr = c.getAttribute("t");
+            if (tAttr !== "inlineStr") continue;
 
-            // <c t="inlineStr"><is>...</is>
-            const isNodes = [];
-            for (let i = 0; i < c.childNodes.length; i++) {
-                const n = c.childNodes[i];
-                if (n?.nodeType === 1 && n.localName === "is") isNodes.push(n);
-            }
+            const isNodes = Array.from(c.children).filter(n => n.localName === "is");
+            if (isNodes.length === 0) continue;
 
-            for (const isNode of isNodes) {
-                const tNodes = collectDescendantTNodes(doc, isNode);
-                if (tNodes.length === 0) continue;
+            const tNodes = collectDescendantTNodes(doc, isNodes[0]);
+            if (tNodes.length === 0) continue;
 
-                const changed = maskAndRedistributeTextNodes(tNodes, words, true);
-                if (changed) {
-                    changedAny = true;
-                    inlineCells++;
-                }
+            const did = maskAndRedistributeTextNodes(tNodes, words);
+            if (did) {
+                inlineCells++;
+                changed = true;
             }
         }
 
-        if (changedAny) {
+        if (changed) {
             zip.file(path, new XMLSerializer().serializeToString(doc));
         }
     }
 
-    return {
-        sharedStringsFound,
-        sharedStringsSi,
-        inlineCells,
-    };
+    return { sharedStringsFound, inlineCells };
 }
 
 // =========================
-// XML helpers
+// Shared helpers (XML)
 // =========================
-function parseXml(xmlText, fileName) {
+function parseXml(xmlText, fileName = "") {
     const parser = new DOMParser();
     const doc = parser.parseFromString(xmlText, "application/xml");
     const err = doc.getElementsByTagName("parsererror")[0];
@@ -584,60 +628,48 @@ function getElementsByLocalName(root, localName) {
     return arr;
 }
 
-function collectDescendantTNodes(doc, rootEl) {
-    const ts = [];
+function collectDescendantTNodes(doc, rootNode) {
+    const out = [];
     const walker = doc.createTreeWalker(
-        rootEl,
+        rootNode,
         NodeFilter.SHOW_ELEMENT,
         {
             acceptNode(node) {
-                return node.localName === "t" ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
-            },
+                return node.localName === "t"
+                    ? NodeFilter.FILTER_ACCEPT
+                    : NodeFilter.FILTER_SKIP;
+            }
         }
     );
-    while (walker.nextNode()) ts.push(walker.currentNode);
-    return ts;
+    while (walker.nextNode()) out.push(walker.currentNode);
+    return out;
 }
 
-// 連結→固定文字列マスク→再分配（色や構造は触らない）
-function maskAndRedistributeTextNodes(tNodes, words, preserveSpace) {
-    const texts = tNodes.map((n) => n.textContent ?? "");
-    const lens = texts.map((s) => s.length);
+/**
+ * 与えられた <t> ノード群を「連結→マスク→再分配」する
+ * @returns {boolean} changed
+ */
+function maskAndRedistributeTextNodes(tNodes, words) {
+    const texts = tNodes.map(n => n.textContent ?? "");
+    const lens = texts.map(s => s.length);
     const joined = texts.join("");
     if (!joined) return false;
 
     let masked = joined;
-    const before = masked;
+    const beforeAll = masked;
 
-    for (const word of words) {
-        masked = replaceAllLiteralKeepingLength(masked, word, MASK_CHAR);
+    for (const w of words) {
+        masked = replaceAllLiteralKeepingLength(masked, w, MASK_CHAR);
     }
-
-    if (masked === before) return false;
+    if (masked === beforeAll) return false;
 
     let cursor = 0;
     for (let i = 0; i < tNodes.length; i++) {
         const part = masked.slice(cursor, cursor + lens[i]);
         cursor += lens[i];
         tNodes[i].textContent = part;
-
-        if (preserveSpace) ensureXmlSpacePreserveIfNeeded(tNodes[i]);
     }
-
-    // 念のため余りがあれば最後に足す（通常は起きない）
-    if (cursor < masked.length && tNodes.length > 0) {
-        tNodes[tNodes.length - 1].textContent += masked.slice(cursor);
-        if (preserveSpace) ensureXmlSpacePreserveIfNeeded(tNodes[tNodes.length - 1]);
-    }
-
     return true;
-}
-
-function ensureXmlSpacePreserveIfNeeded(tNode) {
-    const text = tNode.textContent ?? "";
-    if (/^\s|\s$/.test(text)) {
-        tNode.setAttributeNS("http://www.w3.org/XML/1998/namespace", "xml:space", "preserve");
-    }
 }
 
 // =========================
