@@ -148,7 +148,6 @@ input[type="checkbox"] {
     height: 16px;
 }
 
-/* file input -> button style */
 /* file input -> button style（input隠し） */
 .fileInputHidden {
     position: absolute;
@@ -167,11 +166,8 @@ input[type="checkbox"] {
     color: var(--muted);
     font-size: 12px;
     padding: 0;
-    /* ←枠内っぽさを消す */
     border: none;
-    /* ←ボタン感の原因 */
     background: transparent;
-    /* ←ボタン感の原因 */
     max-width: 520px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -211,7 +207,6 @@ label.btn {
     align-items: center;
     justify-content: center;
     margin-bottom: 0;
-    /* labelのデフォmarginと競合しない */
 }
 
 .btn:hover {
@@ -359,4 +354,125 @@ footer {
         max-width: 100%;
         flex: 1;
     }
+}
+
+/* ========== Modal (README) ========== */
+.modal {
+    width: min(920px, calc(100vw - 24px));
+    border: none;
+    padding: 0;
+    background: transparent;
+}
+
+.modal::backdrop {
+    background: rgba(0, 0, 0, .55);
+    backdrop-filter: blur(2px);
+}
+
+.modalCard {
+    background: color-mix(in oklab, var(--card) 92%, #000 8%);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.modalHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line);
+    background: color-mix(in oklab, var(--bg2) 88%, var(--card));
+}
+
+.modalHeader h2 {
+    margin: 0;
+    font-size: 16px;
+    letter-spacing: .02em;
+}
+
+.modalActions {
+    display: flex;
+    gap: 10px;
+}
+
+/* ========== Markdown (README) ========== */
+.readmeBody.markdown {
+    margin: 0;
+    padding: 14px;
+    max-height: min(72vh, 720px);
+    overflow: auto;
+    line-height: 1.7;
+    color: var(--text);
+    background: transparent;
+}
+
+.readmeBody.markdown h1,
+.readmeBody.markdown h2,
+.readmeBody.markdown h3 {
+    margin: 18px 0 10px;
+    line-height: 1.25;
+}
+
+.readmeBody.markdown h1 {
+    font-size: 20px;
+}
+
+.readmeBody.markdown h2 {
+    font-size: 16px;
+    opacity: .95;
+}
+
+.readmeBody.markdown h3 {
+    font-size: 14px;
+    opacity: .92;
+}
+
+.readmeBody.markdown p {
+    margin: 10px 0;
+}
+
+.readmeBody.markdown ul,
+.readmeBody.markdown ol {
+    margin: 10px 0 10px 22px;
+    padding: 0;
+}
+
+.readmeBody.markdown li {
+    margin: 6px 0;
+}
+
+.readmeBody.markdown hr {
+    border: 0;
+    border-top: 1px solid var(--line);
+    margin: 14px 0;
+}
+
+.readmeBody.markdown pre {
+    background: color-mix(in oklab, var(--bg2) 92%, var(--bg) 8%);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 12px;
+    overflow: auto;
+    margin: 12px 0;
+}
+
+.readmeBody.markdown pre code {
+    background: transparent;
+    border: none;
+    padding: 0;
+    border-radius: 0;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.readmeBody.markdown blockquote {
+    margin: 12px 0;
+    padding: 10px 12px;
+    border-left: 4px solid color-mix(in oklab, var(--accent) 55%, var(--line));
+    background: color-mix(in oklab, var(--bg2) 86%, var(--card));
+    border-radius: 10px;
+    color: color-mix(in oklab, var(--text) 85%, var(--muted));
 }

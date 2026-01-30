@@ -39,10 +39,74 @@ function toggleTheme() {
 }
 
 // =========================
+// README dialog
+// =========================
+function openReadmeDialog() {
+    const dlg = document.getElementById("readmeDialog");
+    const body = document.getElementById("readmeBody");
+    const src = document.getElementById("readmeContent");
+
+    if (!dlg || !body || !src) return;
+
+    const md = (src.textContent || "").trim();
+
+    // markedが使えるならMarkdown→HTML化して表示
+    if (window.marked && typeof window.marked.parse === "function") {
+        // breaks:true = Markdownの改行を<br>として扱う（README向けに読みやすい）
+        body.innerHTML = window.marked.parse(md, { gfm: true, breaks: true });
+    } else {
+        // フォールバック：プレーン表示
+        body.textContent = md;
+    }
+
+    if (typeof dlg.showModal === "function") dlg.showModal();
+    else dlg.setAttribute("open", "");
+}
+
+function closeReadmeDialog() {
+    const dlg = document.getElementById("readmeDialog");
+    if (!dlg) return;
+
+    if (typeof dlg.close === "function") dlg.close();
+    else dlg.removeAttribute("open");
+}
+
+async function copyReadmeToClipboard() {
+    const src = document.getElementById("readmeContent");
+    const text = (src?.textContent || "").trim();
+    if (!text) return;
+
+    try {
+        await navigator.clipboard.writeText(text);
+        alert("READMEをコピーしました");
+    } catch {
+        // clipboardが使えない環境用フォールバック
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+        alert("READMEをコピーしました");
+    }
+}
+
+// =========================
 // Events
 // =========================
 function bindEvents() {
     document.getElementById("themeToggle")?.addEventListener("click", toggleTheme);
+
+    // README
+    document.getElementById("readmeBtn")?.addEventListener("click", openReadmeDialog);
+    document.getElementById("readmeCloseBtn")?.addEventListener("click", closeReadmeDialog);
+    document.getElementById("readmeCopyBtn")?.addEventListener("click", copyReadmeToClipboard);
+
+    // ダイアログ外側クリックで閉じる
+    const dlg = document.getElementById("readmeDialog");
+    dlg?.addEventListener("click", (e) => {
+        if (e.target === dlg) closeReadmeDialog();
+    });
 
     // 「同じファイルを選び直す」と change が発火しないことがあるので、事前に value を空にする
     document.getElementById("filePickBtn")?.addEventListener("click", () => {
