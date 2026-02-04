@@ -13,7 +13,7 @@ const DEFAULT_MASK_RULES = [
     { value: "190-0022", enabled: true },
     { value: "042-595-7557", enabled: true },
     { value: "042-595-7558", enabled: true },
-    { value: "daichi@conphic.co.jp", enabled: true },
+    { value: "sample@conphic.co.jp", enabled: true },
 ];
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -340,7 +340,9 @@ async function runMasking() {
         if (ext === "docx") {
             await maskDocx(zip, words);
             const blob = await zip.generateAsync({ type: "blob" });
-            download(blob, file.name.replace(/\.docx$/i, "_マスキング.docx"));
+
+            const outName = buildMaskedOutputFilename(file.name, words, "_マスキング");
+            download(blob, outName);
             return;
         }
 
@@ -351,7 +353,9 @@ async function runMasking() {
                 return;
             }
             const blob = await zip.generateAsync({ type: "blob" });
-            download(blob, file.name.replace(/\.pptx$/i, "_マスキング.pptx"));
+
+            const outName = buildMaskedOutputFilename(file.name, words, "_マスキング");
+            download(blob, outName);
             return;
         }
 
@@ -361,7 +365,9 @@ async function runMasking() {
                 alert("対象（xl/sharedStrings.xml または inlineStr）が見つかりませんでした（形式差異の可能性）");
             }
             const blob = await zip.generateAsync({ type: "blob" });
-            download(blob, file.name.replace(/\.xlsx$/i, "_マスキング.xlsx"));
+
+            const outName = buildMaskedOutputFilename(file.name, words, "_マスキング");
+            download(blob, outName);
             return;
         }
     } catch (e) {
@@ -753,6 +759,69 @@ function replaceAllLiteralKeepingLength(text, word, maskChar) {
     }
 
     return result;
+}
+
+// =========================
+// Output filename (remove rule words in filename by exact match)
+// =========================
+function sanitizeFilenameForOS(name) {
+    if (!name) return "";
+    return String(name)
+        // Windows禁止文字
+        .replace(/[\\\/:*?"<>|]/g, "")
+        // 制御文字
+        .replace(/[\u0000-\u001f\u007f]/g, "")
+        // 末尾のドット/スペースはOSで問題になりやすい
+        .replace(/[. ]+$/g, "")
+        .trim();
+}
+
+/**
+ * ファイル名（拡張子除く）を区切り文字で分割し、
+ * トークンがルールと「完全一致」した場合のみ削除する。
+ */
+function removeRuleWordsFromBaseNameExact(baseName, ruleWords) {
+    const words = Array.from(
+        new Set((ruleWords || []).map(w => (w ?? "").toString().trim()).filter(Boolean))
+    );
+    if (!baseName || words.length === 0) return baseName;
+
+    // トークン分割に使う区切り（広め）
+    const sepRe = /([ _\-.・、,，\(\)\[\]\{\}【】（）「」『』]+)/;
+
+    // 区切りを保持したまま分割
+    const parts = String(baseName).split(sepRe);
+
+    const removed = parts.map((part) => {
+        if (!part) return "";
+        if (sepRe.test(part)) return part; // 区切りは保持
+        const token = part.trim();
+        if (!token) return "";
+        return words.includes(token) ? "" : part;
+    });
+
+    // 再結合→見た目を整える（連続区切りは "_" に寄せる）
+    let joined = removed.join("");
+    joined = joined
+        .replace(/[ _\-.・、,，\(\)\[\]\{\}【】（）「」『』]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+
+    return joined;
+}
+
+function buildMaskedOutputFilename(inputFilename, ruleWords, suffix = "_マスキング") {
+    const name = String(inputFilename || "");
+    const dot = name.lastIndexOf(".");
+    const hasExt = dot > 0 && dot < name.length - 1;
+
+    const base = hasExt ? name.slice(0, dot) : name;
+    const ext = hasExt ? name.slice(dot) : "";
+
+    const stripped = removeRuleWordsFromBaseNameExact(base, ruleWords);
+    const safeBase = sanitizeFilenameForOS(stripped) || "masked";
+    const outBase = sanitizeFilenameForOS(`${safeBase}${suffix || ""}`) || `masked${suffix || ""}`;
+
+    return `${outBase}${ext}`;
 }
 
 // =========================
