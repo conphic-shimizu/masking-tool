@@ -7,13 +7,11 @@ const MASK_CHAR = "■";
 
 // ===== Default rules =====
 const DEFAULT_MASK_RULES = [
-    { value: "株式会社コンフィック", enabled: true },
-    { value: "コンフィック", enabled: true },
-    { value: "東京都立川市錦町1-4-4立川サニーハイツ303", enabled: true },
-    { value: "190-0022", enabled: true },
-    { value: "042-595-7557", enabled: true },
-    { value: "042-595-7558", enabled: true },
-    { value: "sample@conphic.co.jp", enabled: true },
+    { value: "株式会社hogehoge", enabled: true },
+    { value: "東京都テスト区テスト町1-2-3", enabled: true },
+    { value: "100-0022", enabled: true },
+    { value: "012-345-6789", enabled: true },
+    { value: "sample@hogehoge.co.jp", enabled: true },
 ];
 
 document.addEventListener("DOMContentLoaded", () => {
